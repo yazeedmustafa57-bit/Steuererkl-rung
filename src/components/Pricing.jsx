@@ -40,7 +40,7 @@ function CheckIcon() {
   );
 }
 
-export default function Pricing() {
+export default function Pricing({ onAuthOpen }) {
   return (
     <section id="pricing" className="pricing section">
       <div className="container">
@@ -65,12 +65,12 @@ export default function Pricing() {
                   </li>
                 ))}
               </ul>
-              <a
-                href="#"
+              <button
                 className={`btn ${plan.variant === 'primary' ? 'btn-primary' : 'btn-outline'} pricing-card__cta`}
+                onClick={onAuthOpen}
               >
                 {plan.cta}
-              </a>
+              </button>
             </div>
           ))}
         </div>

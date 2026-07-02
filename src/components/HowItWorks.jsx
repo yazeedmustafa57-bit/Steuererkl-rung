@@ -19,7 +19,7 @@ const steps = [
   },
 ];
 
-export default function HowItWorks() {
+export default function HowItWorks({ onAuthOpen }) {
   return (
     <section id="how-it-works" className="how-it-works section">
       <div className="container">
@@ -38,7 +38,7 @@ export default function HowItWorks() {
           ))}
         </div>
         <div className="how-it-works__cta">
-          <a href="#pricing" className="btn btn-primary">Jetzt kostenlos starten</a>
+          <button className="btn btn-primary" onClick={onAuthOpen}>Jetzt kostenlos starten</button>
         </div>
       </div>
     </section>

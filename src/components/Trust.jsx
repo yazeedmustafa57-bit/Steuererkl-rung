@@ -38,7 +38,7 @@ export default function Trust() {
       <div className="container">
         <h2 className="section-title">Das sagen unsere Nutzer:innen</h2>
         <p className="section-subtitle">
-          Über 8 Millionen Steuererklärungen wurden bereits über SteuerFlow eingereicht.
+          Über 8 Millionen Steuererklärungen wurden bereits über SteuerWert eingereicht.
         </p>
 
         <div className="trust__stats">

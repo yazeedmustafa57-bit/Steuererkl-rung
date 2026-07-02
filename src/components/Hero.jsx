@@ -1,4 +1,4 @@
-export default function Hero() {
+export default function Hero({ onAuthOpen }) {
   return (
     <section id="hero" className="hero section">
       <div className="container hero__inner">
@@ -16,7 +16,7 @@ export default function Hero() {
             Geführt von einer App, die Steuern endlich einfach macht.
           </p>
           <div className="hero__actions">
-            <a href="#pricing" className="btn btn-primary">Kostenlos starten</a>
+            <button className="btn btn-primary" onClick={onAuthOpen}>Kostenlos starten</button>
             <a href="#how-it-works" className="btn btn-outline">So funktioniert's</a>
           </div>
           <div className="hero__stats">

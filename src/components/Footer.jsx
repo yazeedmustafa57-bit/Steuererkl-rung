@@ -1,4 +1,4 @@
-export default function Footer() {
+export default function Footer({ onAuthOpen }) {
   return (
     <footer className="footer">
       <div className="container">
@@ -7,7 +7,9 @@ export default function Footer() {
           <p className="footer__cta-desc">
             Starte kostenlos und sieh sofort, wie viel Geld du zurückbekommst.
           </p>
-          <a href="#pricing" className="btn btn-primary footer__cta-btn">Jetzt kostenlos starten</a>
+          <button className="btn btn-primary footer__cta-btn" onClick={onAuthOpen}>
+            Jetzt kostenlos starten
+          </button>
         </div>
         <div className="footer__divider" />
         <div className="footer__bottom">
@@ -17,7 +19,7 @@ export default function Footer() {
               <path d="M10 22L16 10L22 22" stroke="#0C0B0A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
               <path d="M13 17H19" stroke="#0C0B0A" strokeWidth="2.5" strokeLinecap="round"/>
             </svg>
-            <span className="footer__brand-name">SteuerFlow</span>
+            <span className="footer__brand-name">SteuerWert</span>
           </div>
           <div className="footer__links">
             <a href="#">Impressum</a>
@@ -26,7 +28,7 @@ export default function Footer() {
             <a href="#">Cookie-Einstellungen</a>
           </div>
           <p className="footer__copyright">
-            © {new Date().getFullYear()} SteuerFlow. Alle Rechte vorbehalten.
+            © {new Date().getFullYear()} SteuerWert. Alle Rechte vorbehalten.
           </p>
         </div>
       </div>

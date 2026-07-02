@@ -1,12 +1,12 @@
 import { useState } from 'react';
 
 const navLinks = [
-  { label: 'So funktioniert\'s', href: '#how-it-works' },
+  { label: "So funktioniert's", href: '#how-it-works' },
   { label: 'Preise', href: '#pricing' },
   { label: 'Ratgeber', href: '#faq' },
 ];
 
-export default function Header() {
+export default function Header({ onAuthOpen }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -18,7 +18,7 @@ export default function Header() {
             <path d="M10 22L16 10L22 22" stroke="#0C0B0A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
             <path d="M13 17H19" stroke="#0C0B0A" strokeWidth="2.5" strokeLinecap="round"/>
           </svg>
-          <span>SteuerFlow</span>
+          <span>SteuerWert</span>
         </a>
 
         <nav className={`header__nav ${menuOpen ? 'header__nav--open' : ''}`}>
@@ -27,7 +27,9 @@ export default function Header() {
               {link.label}
             </a>
           ))}
-          <a href="#hero" className="btn btn-primary header__nav-cta">Kostenlos starten</a>
+          <button className="btn btn-primary header__nav-cta" onClick={onAuthOpen}>
+            Kostenlos starten
+          </button>
         </nav>
 
         <button className="header__toggle" onClick={() => setMenuOpen(!menuOpen)} aria-label="Menü">
