@@ -1,0 +1,194 @@
+/* ===== SteuerFlow Design Tokens (Taxfix-inspired) ===== */
+
+:root {
+  /* ── Primary Colors ── */
+  --color-primary: #ADEE68;
+  --color-primary-dark: #36893B;
+  --color-primary-light: #CEF5A4;
+  --color-primary-bg: #ECFFC7;
+
+  /* ── Neutral Colors ── */
+  --color-text-primary: #0C0B0A;
+  --color-text-secondary: #9A9288;
+  --color-text-muted: rgba(12, 11, 10, 0.54);
+  --color-bg: #FFFFFF;
+  --color-surface: #FDF8F2;
+  --color-surface-alt: #F8F6F3;
+  --color-border: rgba(12, 11, 10, 0.10);
+
+  /* ── Support Colors ── */
+  --color-support-blue: #B6C5F3;
+  --color-support-blue-light: #E8F0FF;
+  --color-support-purple: #DBB9F3;
+  --color-support-purple-light: #F6EBFE;
+  --color-support-orange: #F8C677;
+  --color-support-orange-light: #FFEFD3;
+  --color-support-red-light: #FEEBE7;
+
+  /* ── Semantic ── */
+  --color-star: #F8C677;
+  --color-success: #ADEE68;
+
+  /* ── Typography ── */
+  --font-family: 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  --font-family-display: 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+
+  --text-hero: clamp(2.25rem, 5vw, 3.5rem);
+  --text-heading: clamp(1.5rem, 3vw, 2.25rem);
+  --text-subheading: 1.25rem;
+  --text-body: 1rem;
+  --text-body-large: 1.125rem;
+  --text-caption: 0.875rem;
+  --text-small: 0.75rem;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --weight-heavy: 800;
+
+  --line-tight: 1.1;
+  --line-normal: 1.4;
+  --line-relaxed: 1.6;
+
+  /* ── Spacing (8px scale) ── */
+  --space-xxs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+  --space-4xl: 96px;
+  --space-5xl: 128px;
+
+  /* ── Radii ── */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-round: 9999px;
+  --radius-full: 50%;
+
+  /* ── Shadows ── */
+  --shadow-sm: 0 1px 3px rgba(12, 11, 10, 0.06);
+  --shadow-card: 0 2px 12px rgba(12, 11, 10, 0.08);
+  --shadow-elevated: 0 8px 32px rgba(12, 11, 10, 0.10);
+  --shadow-button: 0 2px 6px rgba(12, 11, 10, 0.08);
+
+  /* ── Transitions ── */
+  --transition-fast: 150ms ease;
+  --transition-base: 250ms ease;
+}
+
+/* ── Reset & Base ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-family);
+  font-size: var(--text-body);
+  line-height: var(--line-relaxed);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg);
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+  border: none;
+  background: none;
+}
+
+.container {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 var(--space-lg);
+}
+
+/* ── Utility Classes ── */
+.section {
+  padding: var(--space-4xl) 0;
+}
+
+.section-title {
+  font-size: var(--text-heading);
+  font-weight: var(--weight-bold);
+  line-height: var(--line-tight);
+  letter-spacing: -0.02em;
+  margin-bottom: var(--space-sm);
+  text-align: center;
+}
+
+.section-subtitle {
+  font-size: var(--text-body-large);
+  color: var(--color-text-secondary);
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto var(--space-2xl);
+  line-height: var(--line-normal);
+}
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  padding: 14px 32px;
+  border-radius: var(--radius-round);
+  transition: all var(--transition-base);
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-button);
+}
+.btn-primary:hover {
+  background: #9DE058;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(173, 238, 104, 0.4);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--color-text-primary);
+  border: 2px solid var(--color-text-primary);
+}
+.btn-outline:hover {
+  background: rgba(12, 11, 10, 0.05);
+}
+
+.btn-dark {
+  background: var(--color-text-primary);
+  color: white;
+}
+.btn-dark:hover {
+  opacity: 0.9;
+}
