@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Auth({ isOpen, onClose, onLoginSuccess }) {
-  const { loginWithEmail, registerWithEmail, loginWithGoogle, resetPassword } = useAuth();
-  const [mode, setMode] = useState('select'); // select | email | register | forgot
+  const { loginWithEmail, registerWithEmail, loginWithGoogle, loginWithApple, resetPassword } = useAuth();
+  const [mode, setMode] = useState('select');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -52,6 +52,21 @@ export default function Auth({ isOpen, onClose, onLoginSuccess }) {
     setLoading(true);
     try {
       await loginWithGoogle();
+      onLoginSuccess?.();
+      handleClose();
+    } catch (err) {
+      const msg = getErrorMessage(err.code);
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAppleAuth = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      await loginWithApple();
       onLoginSuccess?.();
       handleClose();
     } catch (err) {
@@ -130,12 +145,12 @@ export default function Auth({ isOpen, onClose, onLoginSuccess }) {
               Mit Google fortfahren
             </button>
 
-            <button className="auth-btn auth-btn--apple" disabled>
+            <button className="auth-btn auth-btn--apple" onClick={handleAppleAuth} disabled={loading}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                 <path d="M15.17 10.6c-.02-2.05 1.67-3.04 1.74-3.09-.95-1.39-2.42-1.58-2.95-1.6-1.25-.13-2.44.74-3.08.74-.63 0-1.62-.72-2.66-.7-1.37.02-2.63.8-3.34 2.03-1.42 2.47-.36 6.13 1.02 8.13.68.98 1.48 2.08 2.54 2.04 1.02-.04 1.4-.66 2.63-.66s1.58.66 2.65.64c1.1-.02 1.8-1 2.47-1.99.77-1.13 1.09-2.22 1.11-2.28-.02-.01-2.13-.82-2.15-3.25z" fill="currentColor"/>
                 <path d="M13.28 3.3c.55-.67.92-1.6.82-2.52-.8.03-1.77.53-2.34 1.2-.52.6-.97 1.56-.85 2.48.9.07 1.82-.45 2.37-1.16z" fill="currentColor"/>
               </svg>
-              Mit Apple fortfahren <span className="auth-coming-soon">(Bald)</span>
+              Mit Apple fortfahren
             </button>
           </div>
         )}
@@ -244,8 +259,10 @@ function getErrorMessage(code) {
     'auth/invalid-email': 'Ungültige E-Mail-Adresse.',
     'auth/invalid-credential': 'E-Mail oder Passwort ist falsch.',
     'auth/too-many-requests': 'Zu viele Versuche. Bitte warte kurz.',
-    'auth/popup-closed-by-user': 'Der Google-Login wurde abgebrochen.',
+    'auth/popup-closed-by-user': 'Der Login wurde abgebrochen.',
     'auth/account-exists-with-different-credential': 'Ein Konto mit dieser E-Mail existiert bereits mit einer anderen Anmeldeart.',
+    'auth/operation-not-supported-in-this-environment': 'Apple Anmeldung wird auf diesem Gerät nicht unterstützt. Bitte verwende E-Mail oder Google.',
+    'auth/web-context-unsupported': 'Apple Anmeldung wird in diesem Browser nicht unterstützt. Bitte verwende Safari oder einen anderen Browser.',
   };
   return map[code] || 'Ein Fehler ist aufgetreten. Bitte versuche es später erneut.';
 }
