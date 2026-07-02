@@ -1,728 +1,622 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { findFinanzamtByPLZ } from '../data/finanzaemter';
 
-const STEPS = [
-  { id: 'personal', label: 'Persönliche Daten', icon: '👤' },
-  { id: 'address', label: 'Adresse & Finanzamt', icon: '📍' },
-  { id: 'income', label: 'Einkünfte', icon: '💼' },
-  { id: 'expenses', label: 'Werbungskosten', icon: '📄' },
-  { id: 'special', label: 'Sonderausgaben', icon: '🏠' },
-  { id: 'health', label: 'Vorsorge', icon: '🩺' },
-  { id: 'documents', label: 'Dokumente', icon: '📎' },
-  { id: 'submit', label: 'Einreichen', icon: '🚀' },
-];
+const ALL_QUESTIONS = [
+  // ─── Step 0: Willkommen ───
+  { id: 'welcome', type: 'welcome', question: 'Hallo! Möchtest du deine Steuererklärung für 2025 machen?', field: null },
 
-const initialData = {
-  personal: {
-    firstName: '', lastName: '', birthDate: '',
-    religion: '', maritalStatus: 'single', children: '0',
-  },
-  address: {
-    street: '', plz: '', city: '', country: 'Deutschland',
-    finanzamt: null,
-  },
-  income: { salary: '', taxClass: '1', hasBonus: 'false', otherIncome: '' },
-  expenses: { commuting: '', homeOffice: '0', workMaterials: '', training: '', hasDualHousehold: 'false' },
-  special: { donations: '', hasHomeOffice: 'false', homeOfficeDays: '0', craftsmen: '', householdServices: '' },
-  health: { healthInsurance: '', nursingInsurance: '', pensionContributions: '', hasPrivateInsurance: 'false' },
-  documents: [],
-  submitted: false,
-};
+  // ─── Step 1: Persönliche Daten ───
+  { id: 'firstName', type: 'text', question: 'Wie ist dein Vorname?', field: ['personal','firstName'], placeholder: 'z.B. Max' },
+  { id: 'lastName', type: 'text', question: 'Und dein Nachname?', field: ['personal','lastName'], placeholder: 'z.B. Mustermann' },
+  { id: 'birthDate', type: 'date', question: 'Wann bist du geboren?', field: ['personal','birthDate'] },
+  { id: 'maritalStatus', type: 'choice', question: 'Wie ist dein Familienstand?', field: ['personal','maritalStatus'],
+    options: [{ value: 'single', label: 'Ledig' }, { value: 'married', label: 'Verheiratet' }, { value: 'divorced', label: 'Geschieden' }, { value: 'widowed', label: 'Verwitwet' }] },
+  { id: 'children', type: 'number', question: 'Für wie viele Kinder bekommst du Kindergeld?', field: ['personal','children'], placeholder: '0', min: 0, max: 10 },
+  { id: 'taxClass', type: 'choice', question: 'Welche Steuerklasse hast du?', field: ['income','taxClass'],
+    options: [{ value: '1', label: 'I – ledig/getrennt' }, { value: '2', label: 'II – Alleinerziehend' }, { value: '3', label: 'III – Verh. (besser)' }, { value: '4', label: 'IV – Verh. (Standard)' }, { value: '5', label: 'V – Verh. (schlechter)' }] },
+
+  // ─── Step 2: Adresse ───
+  { id: 'street', type: 'text', question: 'Deine Straße und Hausnummer?', field: ['address','street'], placeholder: 'Musterstraße 42' },
+  { id: 'plz', type: 'plz', question: 'Wie ist deine Postleitzahl?', field: ['address','plz'], placeholder: 'z.B. 10115' },
+
+  // ─── Step 3: Einkünfte ───
+  { id: 'hasIncome', type: 'yesno', question: 'Hattest du 2025 ein Job?', field: ['income','hasIncome'] },
+  { id: 'salary', type: 'number', question: 'Wie viel hast du 2025 brutto verdient?', field: ['income','salary'], placeholder: '€', depends: ['income','hasIncome', 'yes'] },
+  { id: 'otherIncome', type: 'yesno', question: 'Hattest du noch andere Einkünfte? (Miete, Kapital, etc.)', field: ['income','hasOtherIncome'] },
+  { id: 'otherIncomeAmount', type: 'number', question: 'Wie viel waren das?', field: ['income','otherIncome'], placeholder: '€', depends: ['income','hasOtherIncome', 'yes'] },
+
+  // ─── Step 4: Werbungskosten ───
+  { id: 'hasExpenses', type: 'yesno', question: 'Hattest du berufliche Ausgaben?', field: ['expenses','hasExpenses'] },
+  { id: 'commuting', type: 'number', question: 'Wie viele Kilometer fährst du einfach zur Arbeit?', field: ['expenses','commuting'], placeholder: 'km', depends: ['expenses','hasExpenses', 'yes'] },
+  { id: 'homeOffice', type: 'number', question: 'Wie viele Tage warst du 2025 im Home-Office?', field: ['expenses','homeOffice'], placeholder: 'Tage', depends: ['expenses','hasExpenses', 'yes'] },
+  { id: 'workMaterials', type: 'number', question: 'Hast du Arbeitsmittel gekauft? (Computer, Bücher, etc.)', field: ['expenses','workMaterials'], placeholder: '€', depends: ['expenses','hasExpenses', 'yes'] },
+  { id: 'training', type: 'number', question: 'Was hast du für Fortbildungen ausgegeben?', field: ['expenses','training'], placeholder: '€', depends: ['expenses','hasExpenses', 'yes'] },
+
+  // ─── Step 5: Sonderausgaben ───
+  { id: 'hasSpecial', type: 'yesno', question: 'Hast du gespendet oder Handwerker bezahlt?', field: ['special','hasSpecial'] },
+  { id: 'donations', type: 'number', question: 'Wie viel hast du gespendet?', field: ['special','donations'], placeholder: '€', depends: ['special','hasSpecial', 'yes'] },
+  { id: 'craftsmen', type: 'number', question: 'Was hast du für Handwerker ausgegeben? (Rechnung, Lohn)', field: ['special','craftsmen'], placeholder: '€', depends: ['special','hasSpecial', 'yes'] },
+  { id: 'householdServices', type: 'number', question: 'Hattest du haushaltsnahe Dienstleistungen? (Putzhilfe, Garten)', field: ['special','householdServices'], placeholder: '€', depends: ['special','hasSpecial', 'yes'] },
+
+  // ─── Step 6: Vorsorge ───
+  { id: 'healthInsurance', type: 'number', question: 'Was zahlst du jährlich für die Krankenversicherung?', field: ['health','healthInsurance'], placeholder: '€' },
+  { id: 'nursingInsurance', type: 'number', question: 'Und für die Pflegeversicherung?', field: ['health','nursingInsurance'], placeholder: '€' },
+  { id: 'pensionContributions', type: 'number', question: 'Was zahlst du in die Rentenversicherung?', field: ['health','pensionContributions'], placeholder: '€' },
+
+  // ─── Step 7: Dokumente ───
+  { id: 'documents', type: 'documents', question: 'Hast du deine Belege bereit?', field: null },
+
+  // ─── Step 8: Finanzamt ───
+  { id: 'finanzamtCheck', type: 'finanzamt', question: 'Deine Daten werden an dieses Finanzamt gesendet:', field: null },
+
+  // ─── Step 9: Zusammenfassung ───
+  { id: 'summary', type: 'summary', question: 'Alles bereit für deine Steuererklärung!', field: null },
+];
 
 export default function TaxWizard({ onBack }) {
   const { user } = useAuth();
   const [step, setStep] = useState(0);
-  const [data, setData] = useState(initialData);
-  const [error, setError] = useState('');
+  const [data, setData] = useState({
+    personal: { firstName: '', lastName: '', birthDate: '', maritalStatus: 'single', children: '0' },
+    address: { street: '', plz: '', city: '', country: 'Deutschland', finanzamt: null },
+    income: { taxClass: '1', salary: '', otherIncome: '', hasIncome: null, hasOtherIncome: null },
+    expenses: { commuting: '', homeOffice: '', workMaterials: '', training: '', hasExpenses: null },
+    special: { donations: '', craftsmen: '', householdServices: '', hasSpecial: null },
+    health: { healthInsurance: '', nursingInsurance: '', pensionContributions: '', hasPrivateInsurance: null },
+    documents: [],
+  });
+  const [inputValue, setInputValue] = useState('');
+  const [showResult, setShowResult] = useState(false);
+  const [chatEnd, setChatEnd] = useState(false);
+  const scrollRef = useRef(null);
 
-  const update = (section, field, value) => {
-    setData((prev) => ({
-      ...prev,
-      [section]: { ...prev[section], [field]: value },
-    }));
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [step, inputValue]);
+
+  const q = ALL_QUESTIONS[step];
+  const isVisible = (question) => {
+    if (!question.depends) return true;
+    const [section, field, expected] = question.depends;
+    return data[section]?.[field] === expected;
   };
 
-  const handlePLZChange = (value) => {
-    const plz = value.replace(/\D/g, '').slice(0, 5);
-    update('address', 'plz', plz);
-    if (plz.length === 5) {
-      const fa = findFinanzamtByPLZ(plz);
+  const getQuestionsToShow = () => {
+    return ALL_QUESTIONS.filter((q, i) => {
+      if (i > step) return false;
+      if (q.id === 'documents' || q.id === 'finanzamtCheck' || q.id === 'summary') return true;
+      return isVisible(q);
+    });
+  };
+
+  const currentQ = (() => {
+    let visibleIdx = 0;
+    for (let i = 0; i <= step; i++) {
+      if (isVisible(ALL_QUESTIONS[i])) visibleIdx++;
+      if (i === step) break;
+    }
+    return visibleIdx;
+  })();
+
+  const totalVisible = ALL_QUESTIONS.filter((q, i) => {
+    if (q.type === 'welcome' || q.type === 'documents' || q.type === 'finanzamt' || q.type === 'summary') return true;
+    if (!isVisible(q)) return false;
+    return i <= getLastVisibleIndex();
+  }).length;
+
+  const getLastVisibleIndex = () => {
+    let idx = 0;
+    for (let i = 0; i < ALL_QUESTIONS.length; i++) {
+      if (isVisible(ALL_QUESTIONS[i])) idx = i;
+    }
+    return idx;
+  };
+
+  const getVisibleSoFar = () => {
+    const result = [];
+    for (let i = 0; i <= step; i++) {
+      if (isVisible(ALL_QUESTIONS[i])) result.push(ALL_QUESTIONS[i]);
+    }
+    return result;
+  };
+
+  const visibleSoFar = getVisibleSoFar();
+
+  const handleAnswer = (answer) => {
+    const current = ALL_QUESTIONS[step];
+    if (current.field) {
+      setData((prev) => {
+        const d = { ...prev };
+        const [section, field] = current.field;
+        d[section] = { ...d[section], [field]: answer };
+        return d;
+      });
+    }
+    if (current.id === 'plz' && answer.length === 5) {
+      const fa = findFinanzamtByPLZ(answer);
       if (fa) {
-        update('address', 'finanzamt', fa);
-        update('address', 'city', fa.stadt);
+        setData((prev) => ({
+          ...prev,
+          address: { ...prev.address, plz: answer, city: fa.stadt, finanzamt: fa },
+        }));
       } else {
-        update('address', 'finanzamt', null);
+        setData((prev) => ({
+          ...prev,
+          address: { ...prev.address, plz: answer },
+        }));
       }
+    }
+    if (current.id === 'welcome' && answer === 'yes') {
+      setStep(1);
+    } else if (current.id === 'welcome' && answer === 'no') {
+      setChatEnd(true);
     } else {
-      update('address', 'finanzamt', null);
+      // Find next visible question
+      let next = step + 1;
+      while (next < ALL_QUESTIONS.length) {
+        if (isVisible(ALL_QUESTIONS[next])) break;
+        next++;
+      }
+      if (next >= ALL_QUESTIONS.length) {
+        setShowResult(true);
+      } else {
+        setStep(next);
+      }
+    }
+    setInputValue('');
+  };
+
+  const renderQuestion = (question, idx) => {
+    const isLast = idx === visibleSoFar.length - 1;
+
+    switch (question.type) {
+      case 'welcome':
+        return isLast ? (
+          <div className="chat-welcome" key={question.id}>
+            <div className="chat-tax-logo">
+              <svg width="48" height="48" viewBox="0 0 32 32" fill="none">
+                <rect width="32" height="32" rx="8" fill="#ADEE68"/>
+                <path d="M10 22L16 10L22 22" stroke="#0C0B0A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M13 17H19" stroke="#0C0B0A" strokeWidth="2.5" strokeLinecap="round"/>
+              </svg>
+            </div>
+            <h2 className="chat-title">Steuererklärung 2025</h2>
+            <p className="chat-subtitle">Ich führe dich Schritt für Schritt durch deine Steuererklärung. Dauer: ca. 15 Minuten.</p>
+            <div className="chat-actions">
+              <button className="btn btn-primary chat-action-btn" onClick={() => handleAnswer('yes')}>
+                Los geht's! 🚀
+              </button>
+              <button className="btn btn-outline chat-action-btn" onClick={() => handleAnswer('no')}>
+                Vielleicht später
+              </button>
+            </div>
+          </div>
+        ) : null;
+
+      case 'text':
+      case 'number':
+      case 'date':
+      case 'plz':
+        return isLast ? (
+          <div className="chat-question" key={question.id}>
+            <div className="chat-bubble chat-bubble--bot">
+              <p>{question.question}</p>
+            </div>
+            <div className="chat-input-area">
+              <input
+                className="chat-input"
+                type={question.type === 'date' ? 'date' : question.type === 'number' || question.type === 'plz' ? 'text' : 'text'}
+                inputMode={question.type === 'number' ? 'numeric' : question.type === 'plz' ? 'numeric' : 'text'}
+                placeholder={question.placeholder || ''}
+                value={inputValue}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (question.type === 'plz') {
+                    const cleaned = val.replace(/\D/g, '').slice(0, 5);
+                    setInputValue(cleaned);
+                    if (cleaned.length === 5) {
+                      const fa = findFinanzamtByPLZ(cleaned);
+                      if (fa) {
+                        setData((prev) => ({
+                          ...prev,
+                          address: { ...prev.address, plz: cleaned, city: fa.stadt, finanzamt: fa },
+                        }));
+                      }
+                      setTimeout(() => handleAnswer(cleaned), 400);
+                    }
+                    return;
+                  }
+                  setInputValue(val);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && inputValue.trim()) {
+                    if (question.type === 'plz' && inputValue.length !== 5) return;
+                    handleAnswer(inputValue.trim());
+                  }
+                }}
+                autoFocus
+              />
+              <button
+                className="chat-send"
+                onClick={() => {
+                  if (inputValue.trim()) {
+                    handleAnswer(inputValue.trim());
+                  }
+                }}
+                disabled={!inputValue.trim() || (question.type === 'plz' && inputValue.length !== 5)}
+              >
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <path d="M17 10L3 3l4 7-4 7 14-7z" fill="currentColor"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        ) : null;
+
+      case 'yesno':
+        return isLast ? (
+          <div className="chat-question" key={question.id}>
+            <div className="chat-bubble chat-bubble--bot">
+              <p>{question.question}</p>
+            </div>
+            <div className="chat-actions-row">
+              <button className="chat-btn-choice chat-btn--yes" onClick={() => handleAnswer('yes')}>
+                <span className="chat-btn-icon">👍</span> Ja
+              </button>
+              <button className="chat-btn-choice chat-btn--no" onClick={() => handleAnswer('no')}>
+                <span className="chat-btn-icon">👎</span> Nein
+              </button>
+            </div>
+          </div>
+        ) : null;
+
+      case 'choice':
+        return isLast ? (
+          <div className="chat-question" key={question.id}>
+            <div className="chat-bubble chat-bubble--bot">
+              <p>{question.question}</p>
+            </div>
+            <div className="chat-options-grid">
+              {question.options.map((opt) => (
+                <button key={opt.value} className="chat-option-btn" onClick={() => handleAnswer(opt.value)}>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null;
+
+      case 'documents':
+        return isLast ? <DocumentChatStep key="docs" data={data} setData={setData} onContinue={() => {
+          let n = step + 1;
+          while (n < ALL_QUESTIONS.length) {
+            if (isVisible(ALL_QUESTIONS[n])) break;
+            n++;
+          }
+          setStep(n);
+        }} /> : null;
+
+      case 'finanzamt':
+        return isLast ? <FinanzamtChatStep key="fa" data={data} onContinue={() => {
+          let n = step + 1;
+          while (n < ALL_QUESTIONS.length) {
+            if (isVisible(ALL_QUESTIONS[n])) break;
+            n++;
+          }
+          setStep(n);
+        }} /> : null;
+
+      case 'summary':
+        return isLast ? <SummaryChatStep key="summary" data={data} onDone={() => setShowResult(true)} /> : null;
+
+      default:
+        return null;
     }
   };
 
-  const canProceed = () => {
-    const current = STEPS[step].id;
-    if (current === 'personal') {
-      const p = data.personal;
-      return p.firstName && p.lastName && p.birthDate;
-    }
-    if (current === 'address') {
-      const a = data.address;
-      return a.street && a.plz && a.plz.length === 5 && a.city && a.finanzamt;
-    }
-    return true;
-  };
+  if (showResult) {
+    return <ResultView data={data} onBack={onBack} />;
+  }
 
-  const handleSubmit = () => {
-    if (!data.address.finanzamt) {
-      setError('Bitte gib deine vollständige Adresse mit PLZ an.');
-      return;
-    }
-    setError('');
-    setData((prev) => ({ ...prev, submitted: true }));
-  };
-
-  if (data.submitted) {
-    return <SubmissionView data={data} onBack={onBack} />;
+  if (chatEnd) {
+    return (
+      <div className="wizard-chat">
+        <div className="chat-header">
+          <div className="container chat-header__inner">
+            <button className="chat-back" onClick={onBack}>
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M15 10H5M5 10l5-5M5 10l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Dashboard
+            </button>
+            <span className="chat-brand">SteuerWert</span>
+            <div />
+          </div>
+        </div>
+        <div className="chat-body" style={{ justifyContent: 'center', textAlign: 'center' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>👋</div>
+          <h2>Bis bald!</h2>
+          <p style={{ color: 'var(--color-text-secondary)', marginTop: '0.5rem' }}>Komm einfach wieder, wenn du bereit bist.</p>
+          <button className="btn btn-primary" onClick={onBack} style={{ marginTop: '1.5rem' }}>Dashboard</button>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="wizard">
-      <div className="wizard-header">
-        <div className="container wizard-header__inner">
-          <button className="wizard-back" onClick={step === 0 ? onBack : () => setStep(step - 1)}>
+    <div className="wizard-chat">
+      <div className="chat-header">
+        <div className="container chat-header__inner">
+          <button className="chat-back" onClick={() => {
+            // Go to previous visible question
+            let prev = step - 1;
+            while (prev >= 0) {
+              if (isVisible(ALL_QUESTIONS[prev])) break;
+              prev--;
+            }
+            if (prev >= 0) setStep(prev);
+          }}>
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
               <path d="M15 10H5M5 10l5-5M5 10l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            {step === 0 ? 'Dashboard' : 'Zurück'}
           </button>
-          <span className="wizard-brand">SteuerWert</span>
-          <div className="wizard-step-indicator">{step + 1} / {STEPS.length}</div>
+          <span className="chat-brand">SteuerWert</span>
+          <div className="chat-progress-text">{currentQ} von {totalVisible}</div>
         </div>
       </div>
 
-      <div className="wizard-progress-bar">
-        <div className="wizard-progress-fill" style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} />
+      <div className="chat-progress-bar">
+        <div className="chat-progress-fill" style={{ width: `${(currentQ / totalVisible) * 100}%` }} />
       </div>
 
-      <div className="container wizard-content">
-        {error && <div className="auth-error">{error}</div>}
-
-        {renderStep(step, data, update, setData, handlePLZChange)}
-
-        <div className="wizard-nav">
-          <div />
-          <button
-            className="btn btn-primary"
-            disabled={!canProceed()}
-            onClick={step === STEPS.length - 1 ? handleSubmit : () => setStep(step + 1)}
-          >
-            {step === STEPS.length - 1 ? 'Steuererklärung einreichen' : 'Weiter'}
-          </button>
+      <div className="chat-body" ref={scrollRef}>
+        <div className="container chat-container">
+          {visibleSoFar.map((q, idx) => renderQuestion(q, idx))}
         </div>
       </div>
     </div>
   );
 }
 
-function StepIndicator({ current }) {
-  return (
-    <div className="wizard-steps">
-      {STEPS.map((s, i) => (
-        <div key={s.id} className={`wizard-step-dot ${i === current ? 'active' : i < current ? 'done' : ''}`}>
-          <span className="wizard-step-icon">{i < current ? '✓' : s.icon}</span>
-          <span className="wizard-step-label">{s.label}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function renderStep(step, data, update, setData, handlePLZChange) {
-  const p = data.personal;
-  const a = data.address;
-  const inc = data.income;
-  const exp = data.expenses;
-  const sp = data.special;
-  const he = data.health;
-
-  switch (step) {
-    case 0:
-      return (
-        <div className="wizard-step-content">
-          <StepIndicator current={0} />
-          <h2 className="wizard-step-title">Persönliche Daten</h2>
-          <p className="wizard-step-desc">Gib deine persönlichen Daten ein – diese braucht das Finanzamt zur Identifikation.</p>
-          <div className="wizard-form-grid">
-            <div className="auth-field">
-              <label className="auth-label">Vorname *</label>
-              <input className="auth-input" placeholder="Max" value={p.firstName} onChange={(e) => update('personal', 'firstName', e.target.value)} />
-            </div>
-            <div className="auth-field">
-              <label className="auth-label">Nachname *</label>
-              <input className="auth-input" placeholder="Mustermann" value={p.lastName} onChange={(e) => update('personal', 'lastName', e.target.value)} />
-            </div>
-            <div className="auth-field">
-              <label className="auth-label">Geburtsdatum *</label>
-              <input className="auth-input" type="date" value={p.birthDate} onChange={(e) => update('personal', 'birthDate', e.target.value)} />
-            </div>
-            <div className="auth-field">
-              <label className="auth-label">Steuerklasse</label>
-              <select className="auth-input" value={inc.taxClass} onChange={(e) => update('income', 'taxClass', e.target.value)}>
-                <option value="1">I – ledig / getrennt</option>
-                <option value="2">II – Alleinerziehend</option>
-                <option value="3">III – verheiratet (besser)</option>
-                <option value="4">IV – verheiratet (Standard)</option>
-                <option value="5">V – verheiratet (schlechter)</option>
-                <option value="6">VI – Zweitjob</option>
-              </select>
-            </div>
-            <div className="auth-field">
-              <label className="auth-label">Familienstand</label>
-              <select className="auth-input" value={p.maritalStatus} onChange={(e) => update('personal', 'maritalStatus', e.target.value)}>
-                <option value="single">Ledig</option>
-                <option value="married">Verheiratet</option>
-                <option value="divorced">Geschieden</option>
-                <option value="widowed">Verwitwet</option>
-              </select>
-            </div>
-            <div className="auth-field">
-              <label className="auth-label">Kinderfreibeträge</label>
-              <select className="auth-input" value={p.children} onChange={(e) => update('personal', 'children', e.target.value)}>
-                {[0,1,2,3,4,5].map(n => <option key={n} value={n}>{n} Kind{n !== 1 ? 'er' : ''}</option>)}
-              </select>
-            </div>
-          </div>
-        </div>
-      );
-
-    case 1:
-      return (
-        <div className="wizard-step-content">
-          <StepIndicator current={1} />
-          <h2 className="wizard-step-title">Adresse & Finanzamt</h2>
-          <p className="wizard-step-desc">Deine Adresse bestimmt, welches Finanzamt für dich zuständig ist.</p>
-          <div className="wizard-form-grid">
-            <div className="auth-field wizard-field-full">
-              <label className="auth-label">Straße + Hausnummer *</label>
-              <input className="auth-input" placeholder="Musterstraße 42" value={a.street} onChange={(e) => update('address', 'street', e.target.value)} />
-            </div>
-            <div className="auth-field">
-              <label className="auth-label">PLZ *</label>
-              <input className="auth-input" placeholder="10115" value={a.plz} onChange={(e) => handlePLZChange(e.target.value)} maxLength={5} />
-            </div>
-            <div className="auth-field">
-              <label className="auth-label">Stadt</label>
-              <input className="auth-input" value={a.city} placeholder="Wird automatisch ermittelt" readOnly />
-            </div>
-          </div>
-          {a.finanzamt && (
-            <div className="finanzamt-card">
-              <div className="finanzamt-card-header">
-                <span className="finanzamt-badge">✔ Zuständiges Finanzamt gefunden</span>
-              </div>
-              <div className="finanzamt-card-body">
-                <div className="finanzamt-row">
-                  <span className="finanzamt-label">Name</span>
-                  <span className="finanzamt-value">{a.finanzamt.name}</span>
-                </div>
-                <div className="finanzamt-row">
-                  <span className="finanzamt-label">Finanzamt-Nr.</span>
-                  <span className="finanzamt-value finanzamt-nummer">{a.finanzamt.nummer}</span>
-                </div>
-                <div className="finanzamt-row">
-                  <span className="finanzamt-label">Adresse</span>
-                  <span className="finanzamt-value">{a.finanzamt.adresse}</span>
-                </div>
-                <div className="finanzamt-row">
-                  <span className="finanzamt-label">Telefon</span>
-                  <span className="finanzamt-value">{a.finanzamt.telefon}</span>
-                </div>
-                <div className="finanzamt-row">
-                  <span className="finanzamt-label">Bundesland</span>
-                  <span className="finanzamt-value">{a.finanzamt.bundesland}</span>
-                </div>
-              </div>
-            </div>
-          )}
-          {a.plz.length === 5 && !a.finanzamt && (
-            <div className="finanzamt-card finanzamt-card--error">
-              <p>Kein Finanzamt zu PLZ {a.plz} gefunden. Bitte überprüfe die PLZ.</p>
-            </div>
-          )}
-        </div>
-      );
-
-    case 2:
-      return (
-        <div className="wizard-step-content">
-          <StepIndicator current={2} />
-          <h2 className="wizard-step-title">Deine Einkünfte</h2>
-          <p className="wizard-step-desc">Trage deine Einkünfte aus dem Jahr 2025 ein. Diese Daten werden später an dein Finanzamt ({a.finanzamt?.name || 'wird ermittelt'}) übermittelt.</p>
-          <div className="wizard-form-grid">
-            <div className="auth-field">
-              <label className="auth-label">Bruttojahresgehalt (€)</label>
-              <input className="auth-input" type="number" placeholder="z.B. 45000" value={inc.salary} onChange={(e) => update('income', 'salary', e.target.value)} />
-            </div>
-            <div className="auth-field">
-              <label className="auth-label">Steuerklasse</label>
-              <input className="auth-input" value={`Klasse ${inc.taxClass}`} disabled />
-            </div>
-            <div className="auth-field wizard-field-full">
-              <label className="auth-label">Weitere Einkünfte (€)</label>
-              <input className="auth-input" type="number" placeholder="Mieteinnahmen, Kapitalerträge, etc." value={inc.otherIncome} onChange={(e) => update('income', 'otherIncome', e.target.value)} />
-            </div>
-          </div>
-        </div>
-      );
-
-    case 3:
-      return (
-        <div className="wizard-step-content">
-          <StepIndicator current={3} />
-          <h2 className="wizard-step-title">Werbungskosten</h2>
-          <p className="wizard-step-desc">Berufliche Ausgaben mindern dein zu versteuerndes Einkommen. Der Arbeitnehmer-Pauschbetrag beträgt 1.230 €.</p>
-          <div className="wizard-form-grid">
-            <div className="auth-field">
-              <label className="auth-label">Entfernung zur Arbeit (km)</label>
-              <input className="auth-input" type="number" placeholder="einfache Strecke" value={exp.commuting} onChange={(e) => update('expenses', 'commuting', e.target.value)} />
-            </div>
-            <div className="auth-field">
-              <label className="auth-label">Home-Office Tage</label>
-              <input className="auth-input" type="number" placeholder="z.B. 120" value={exp.homeOffice} onChange={(e) => update('expenses', 'homeOffice', e.target.value)} />
-            </div>
-            <div className="auth-field">
-              <label className="auth-label">Arbeitsmittel (€)</label>
-              <input className="auth-input" type="number" placeholder="Computer, Bücher" value={exp.workMaterials} onChange={(e) => update('expenses', 'workMaterials', e.target.value)} />
-            </div>
-            <div className="auth-field">
-              <label className="auth-label">Fortbildung (€)</label>
-              <input className="auth-input" type="number" placeholder="Seminare, Kurse" value={exp.training} onChange={(e) => update('expenses', 'training', e.target.value)} />
-            </div>
-          </div>
-        </div>
-      );
-
-    case 4:
-      return (
-        <div className="wizard-step-content">
-          <StepIndicator current={4} />
-          <h2 className="wizard-step-title">Sonderausgaben</h2>
-          <p className="wizard-step-desc">Spenden, Handwerker- und haushaltsnahe Dienstleistungen sind absetzbar.</p>
-          <div className="wizard-form-grid">
-            <div className="auth-field">
-              <label className="auth-label">Spenden (€)</label>
-              <input className="auth-input" type="number" placeholder="z.B. 500" value={sp.donations} onChange={(e) => update('special', 'donations', e.target.value)} />
-            </div>
-            <div className="auth-field">
-              <label className="auth-label">Handwerkerleistungen (€)</label>
-              <input className="auth-input" type="number" placeholder="20% absetzbar" value={sp.craftsmen} onChange={(e) => update('special', 'craftsmen', e.target.value)} />
-            </div>
-            <div className="auth-field wizard-field-full">
-              <label className="auth-label">Haushaltsnahe Dienstleistungen (€)</label>
-              <input className="auth-input" type="number" placeholder="Putzhilfe, Gartenarbeit" value={sp.householdServices} onChange={(e) => update('special', 'householdServices', e.target.value)} />
-            </div>
-          </div>
-        </div>
-      );
-
-    case 5:
-      return (
-        <div className="wizard-step-content">
-          <StepIndicator current={5} />
-          <h2 className="wizard-step-title">Vorsorgeaufwendungen</h2>
-          <p className="wizard-step-desc">Kranken-, Pflege- und Rentenversicherungsbeiträge sind als Vorsorgeaufwendungen absetzbar.</p>
-          <div className="wizard-form-grid">
-            <div className="auth-field">
-              <label className="auth-label">Krankenversicherung (€/Jahr)</label>
-              <input className="auth-input" type="number" placeholder="z.B. 4200" value={he.healthInsurance} onChange={(e) => update('health', 'healthInsurance', e.target.value)} />
-            </div>
-            <div className="auth-field">
-              <label className="auth-label">Pflegeversicherung (€/Jahr)</label>
-              <input className="auth-input" type="number" placeholder="z.B. 600" value={he.nursingInsurance} onChange={(e) => update('health', 'nursingInsurance', e.target.value)} />
-            </div>
-            <div className="auth-field">
-              <label className="auth-label">Rentenversicherung (€/Jahr)</label>
-              <input className="auth-input" type="number" placeholder="z.B. 5500" value={he.pensionContributions} onChange={(e) => update('health', 'pensionContributions', e.target.value)} />
-            </div>
-          </div>
-        </div>
-      );
-
-    case 6:
-      return <DocumentUploadStep data={data} update={update} setData={setData} />;
-
-    case 7:
-      return <SubmitStep data={data} />;
-
-    default:
-      return null;
-  }
-}
-
-function DocumentUploadStep({ data, update, setData }) {
-  const fileInputRef = useRef(null);
-  const [uploading, setUploading] = useState(false);
+// ─── Document Step ───
+function DocumentChatStep({ data, setData, onContinue }) {
+  const fileRef = useRef(null);
+  const [showList, setShowList] = useState(false);
 
   const handleUpload = (e) => {
     const files = Array.from(e.target.files || []);
-    const newDocs = files.map((f) => ({
-      name: f.name,
-      size: f.size,
-      type: f.type,
-      id: Date.now() + Math.random().toString(36).slice(2),
-      uploaded: false,
-    }));
-    setData((prev) => ({
-      ...prev,
-      documents: [...prev.documents, ...newDocs],
-    }));
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  const removeDoc = (id) => {
-    setData((prev) => ({
-      ...prev,
-      documents: prev.documents.filter((d) => d.id !== id),
-    }));
+    if (files.length > 0) {
+      setData((prev) => ({
+        ...prev,
+        documents: [
+          ...prev.documents,
+          ...files.map((f) => ({ id: Date.now() + Math.random(), name: f.name, size: f.size, type: f.type })),
+        ],
+      }));
+      setShowList(true);
+    }
   };
 
   return (
-    <div className="wizard-step-content">
-      <StepIndicator current={6} />
-      <h2 className="wizard-step-title">Dokumente hochladen</h2>
-      <p className="wizard-step-desc">Lade deine Belege und Nachweise hoch. Das Finanzamt kann diese bei Bedarf anfordern. (Max. 5 MB pro Datei)</p>
+    <div className="chat-question" key="docs">
+      <div className="chat-bubble chat-bubble--bot">
+        <p>Lade deine Belege hoch – das Finanzamt kann sie digital anfordern.</p>
+        <p className="chat-hint">Lohnsteuerbescheinigung, Spendenquittungen, Handwerkerrechnungen</p>
+      </div>
 
-      <div className="doc-upload-area" onClick={() => fileInputRef.current?.click()}>
-        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+      <div className="chat-doc-upload" onClick={() => fileRef.current?.click()}>
+        <svg width="32" height="32" viewBox="0 0 40 40" fill="none">
           <rect x="4" y="4" width="32" height="32" rx="8" stroke="#ADEE68" strokeWidth="2" strokeDasharray="4 4"/>
           <path d="M20 14v12M14 20h12" stroke="#ADEE68" strokeWidth="2" strokeLinecap="round"/>
         </svg>
-        <p className="doc-upload-text">Klicke zum Hochladen oder ziehe Dateien hierher</p>
-        <p className="doc-upload-hint">Lohnsteuerbescheinigung, Belege, Spendenquittungen (PDF, JPG, PNG)</p>
-        <input ref={fileInputRef} type="file" multiple accept=".pdf,.jpg,.jpeg,.png" onChange={handleUpload} style={{ display: 'none' }} />
+        <p>Klicke zum Hochladen</p>
+        <input ref={fileRef} type="file" multiple accept=".pdf,.jpg,.png" style={{ display: 'none' }} onChange={handleUpload} />
       </div>
 
-      {data.documents.length > 0 && (
-        <div className="doc-list">
-          <h4 className="doc-list-title">{data.documents.length} Datei{data.documents.length !== 1 ? 'en' : ''} ausgewählt</h4>
-          {data.documents.map((doc) => (
-            <div key={doc.id} className="doc-item">
-              <div className="doc-icon">
-                {doc.type.includes('pdf') ? '📄' : '🖼️'}
-              </div>
-              <div className="doc-info">
-                <span className="doc-name">{doc.name}</span>
-                <span className="doc-size">{(doc.size / 1024).toFixed(0)} KB</span>
-              </div>
-              <button className="doc-remove" onClick={() => removeDoc(doc.id)} aria-label="Entfernen">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M12 4L4 12M4 4l8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                </svg>
-              </button>
+      {showList && data.documents.length > 0 && (
+        <div className="chat-doc-list">
+          {data.documents.map((d) => (
+            <div key={d.id} className="chat-doc-item">
+              <span>📄 {d.name}</span>
+              <span className="chat-doc-size">({(d.size / 1024).toFixed(0)} KB)</span>
             </div>
           ))}
         </div>
       )}
 
-      <div className="doc-requirements">
-        <h4>Vom Finanzamt angeforderte Unterlagen:</h4>
-        <ul>
-          <li>✅ Lohnsteuerbescheinigung (vom Arbeitgeber)</li>
-          <li>✅ Vorsorgeaufwendungen (von der Versicherung)</li>
-          <li>✅ Spendenquittungen</li>
-          <li>✅ Handwerkerrechnungen</li>
-          <li>✅ Belege für Fortbildungskosten</li>
-        </ul>
-        <p className="doc-note">Das Finanzamt fordert Belege nur bei Bedarf an – bewahre sie trotzdem gut auf!</p>
+      <button className="btn btn-primary" onClick={onContinue} style={{ marginTop: '1rem', width: '100%' }}>
+        {data.documents.length > 0 ? `Weiter (${data.documents.length} Dateien)` : 'Weiter ohne Dateien'}
+      </button>
+    </div>
+  );
+}
+
+// ─── Finanzamt Step ───
+function FinanzamtChatStep({ data, onContinue }) {
+  const fa = data.address.finanzamt;
+
+  if (!fa) {
+    return (
+      <div className="chat-question">
+        <div className="chat-bubble chat-bubble--bot">
+          <p>⚠️ Wir konnten kein Finanzamt zu deiner PLZ finden. Bitte überprüfe deine Angaben.</p>
+        </div>
+        <button className="btn btn-primary" onClick={onContinue} style={{ width: '100%' }}>Trotzdem fortfahren</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="chat-question">
+      <div className="chat-bubble chat-bubble--bot">
+        <p>Deine Daten werden an dieses Finanzamt gesendet:</p>
+      </div>
+      <div className="chat-fa-card">
+        <div className="chat-fa-icon">🏛️</div>
+        <div className="chat-fa-info">
+          <strong>{fa.name}</strong>
+          <p>Finanzamt-Nr: <code>{fa.nummer}</code></p>
+          <p>{fa.adresse}</p>
+          <p>📞 {fa.telefon}</p>
+        </div>
+      </div>
+      <div className="chat-bubble chat-bubble--bot">
+        <p>Stimmt das? Dann können wir zusammenfassen!</p>
+      </div>
+      <button className="btn btn-primary" onClick={onContinue} style={{ width: '100%' }}>
+        Ja, weiter zur Zusammenfassung
+      </button>
+    </div>
+  );
+}
+
+// ─── Summary Step ───
+function SummaryChatStep({ data, onDone }) {
+  const fa = data.address.finanzamt;
+  const salary = parseFloat(data.income.salary) || 0;
+  const estimatedRefund = Math.max(0, Math.round(salary * 0.12 + 1000));
+  const p = data.personal;
+  const inc = data.income;
+  const exp = data.expenses;
+  const sp = data.special;
+  const he = data.health;
+
+  return (
+    <div className="chat-question">
+      <div className="chat-bubble chat-bubble--bot">
+        <p>Hier ist deine Zusammenfassung. Alles richtig?</p>
+      </div>
+
+      <div className="chat-summary-card">
+        <div className="chat-summary-section">
+          <h4>👤 Persönlich</h4>
+          <p>{p.firstName} {p.lastName} • Geb. {p.birthDate}</p>
+          <p>SK {inc.taxClass} • {p.maritalStatus === 'single' ? 'Ledig' : p.maritalStatus} • {p.children} Kind(er)</p>
+        </div>
+        <div className="chat-summary-section">
+          <h4>📍 Adresse</h4>
+          <p>{data.address.street}, {data.address.plz} {data.address.city}</p>
+          {fa && <p className="chat-summary-fa">🏛️ {fa.name}</p>}
+        </div>
+        {salary > 0 && (
+          <div className="chat-summary-section">
+            <h4>💰 Einkünfte</h4>
+            <p>{salary.toLocaleString('de-DE')} € {inc.otherIncome ? `+ ${inc.otherIncome} €` : ''}</p>
+          </div>
+        )}
+        {exp.hasExpenses === 'yes' && (
+          <div className="chat-summary-section">
+            <h4>📄 Werbungskosten</h4>
+            <p>{exp.commuting ? `${exp.commuting} km Fahrt • ` : ''}{exp.homeOffice ? `${exp.homeOffice} Tage Home-Office` : ''}</p>
+          </div>
+        )}
+      </div>
+
+      <div className="chat-refund-teaser">
+        <span className="chat-refund-label">Voraussichtliche Erstattung</span>
+        <span className="chat-refund-value">{estimatedRefund.toLocaleString('de-DE')} €</span>
+        <span className="chat-refund-note">Berechnung durch das Finanzamt ist verbindlich</span>
+      </div>
+
+      <div className="chat-actions-row">
+        <button className="btn btn-primary" onClick={onDone} style={{ flex: 1 }}>
+          ✅ Absenden & XML exportieren
+        </button>
       </div>
     </div>
   );
 }
 
-function SubmitStep({ data }) {
+// ─── Result View ───
+function ResultView({ data, onBack }) {
   const fa = data.address.finanzamt;
   const salary = parseFloat(data.income.salary) || 0;
-  const otherIncome = parseFloat(data.income.otherIncome) || 0;
-  const totalIncome = salary + otherIncome;
   const estimatedRefund = Math.max(0, Math.round(salary * 0.12 + 1000));
 
-  const getELSTERXml = () => {
-    // Erstelle ELSTER-konforme XML-Datei
+  const downloadXML = () => {
     const p = data.personal;
     const a = data.address;
     const inc = data.income;
     const exp = data.expenses;
     const sp = data.special;
     const he = data.health;
-    const taxYear = 2025;
 
-    return `<?xml version="1.0" encoding="UTF-8"?>
-<ELSTER xmlns="http://www.elster.de/elster/v1.0" version="1.0">
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<ELSTER version="1.0">
   <Kopf>
     <HerstellerID>steuerwert_app</HerstellerID>
-    <DatenLieferant>SteuerWert App</DatenLieferant>
     <Verarbeitungsdatum>${new Date().toISOString().split('T')[0]}</Verarbeitungsdatum>
   </Kopf>
-  <Steuererklärung Art="ESt" Jahr="${taxYear}">
+  <Steuererklaerung Jahr="2025">
     <Steuerpflichtiger>
-      <Name>
-        <Vorname>${p.firstName}</Vorname>
-        <Nachname>${p.lastName}</Nachname>
-      </Name>
+      <Vorname>${p.firstName}</Vorname>
+      <Nachname>${p.lastName}</Nachname>
       <Geburtsdatum>${p.birthDate}</Geburtsdatum>
       <Steuerklasse>${inc.taxClass}</Steuerklasse>
       <Familienstand>${p.maritalStatus}</Familienstand>
       <Kinder>${p.children}</Kinder>
-      <Adresse>
-        <Strasse>${a.street}</Strasse>
-        <PLZ>${a.plz}</PLZ>
-        <Ort>${a.city}</Ort>
-        <Land>${a.country}</Land>
-      </Adresse>
+      <Strasse>${a.street}</Strasse>
+      <PLZ>${a.plz}</PLZ>
+      <Ort>${a.city}</Ort>
     </Steuerpflichtiger>
-    <ZustaendigesFinanzamt>
-      <Name>${fa?.name || ''}</Name>
-      <FinanzamtNummer>${fa?.nummer || ''}</FinanzamtNummer>
-      <Adresse>${fa?.adresse || ''}</Adresse>
-    </ZustaendigesFinanzamt>
-    <Einkuenfte>
-      <Bruttogehalt>${salary}</Bruttogehalt>
-      <WeitereEinkuenfte>${otherIncome}</WeitereEinkuenfte>
-      <Gesamtbetrag>${totalIncome}</Gesamtbetrag>
-    </Einkuenfte>
-    <Werbungskosten>
-      <EntfernungPauschal>${
-        exp.commuting ? Math.round(parseFloat(exp.commuting) * 0.30 * 230) : 0
-      }</EntfernungPauschal>
-      <HomeOfficePauschal>${
-        exp.homeOffice ? Math.min(parseFloat(exp.homeOffice) * 6, 1260) : 0
-      }</HomeOfficePauschal>
-      <Arbeitsmittel>${parseFloat(exp.workMaterials) || 0}</Arbeitsmittel>
-      <Fortbildung>${parseFloat(exp.training) || 0}</Fortbildung>
-    </Werbungskosten>
-    <Sonderausgaben>
-      <Spenden>${parseFloat(sp.donations) || 0}</Spenden>
-      <Handwerkerleistungen>${parseFloat(sp.craftsmen) || 0}</Handwerkerleistungen>
-      <HaushaltsnaheDienstleistungen>${parseFloat(sp.householdServices) || 0}</HaushaltsnaheDienstleistungen>
-    </Sonderausgaben>
-    <Vorsorgeaufwendungen>
-      <Krankenversicherung>${parseFloat(he.healthInsurance) || 0}</Krankenversicherung>
-      <Pflegeversicherung>${parseFloat(he.nursingInsurance) || 0}</Pflegeversicherung>
-      <Rentenversicherung>${parseFloat(he.pensionContributions) || 0}</Rentenversicherung>
-    </Vorsorgeaufwendungen>
-    <Berechnung>
-      <VoraussichtlicheErstattung>${estimatedRefund}</VoraussichtlicheErstattung>
-    </Berechnung>
-  </Steuererklärung>
+    <Finanzamt>${fa?.nummer || ''}</Finanzamt>
+    <Einkuenfte Brutto="${salary}" Weitere="${inc.otherIncome || 0}" />
+    <Werbungskosten Fahrt="${exp.commuting || 0}" HomeOffice="${exp.homeOffice || 0}" Arbeitsmittel="${exp.workMaterials || 0}" Fortbildung="${exp.training || 0}" />
+    <Sonderausgaben Spenden="${sp.donations || 0}" Handwerker="${sp.craftsmen || 0}" Haushalt="${sp.householdServices || 0}" />
+    <Vorsorge Krankenversicherung="${he.healthInsurance || 0}" Pflege="${he.nursingInsurance || 0}" Rente="${he.pensionContributions || 0}" />
+    <Erstattung Voraussichtlich="${estimatedRefund}" />
+  </Steuererklaerung>
 </ELSTER>`;
-  };
 
-  const downloadXML = () => {
-    const xml = getELSTERXml();
     const blob = new Blob([xml], { type: 'text/xml;charset=utf-8' });
     const url = URL.createObjectURL(blob);
-    const linkEl = document.createElement('a');
-    linkEl.href = url;
-    linkEl.download = `steuererklaerung-2025-${data.personal.lastName}.xml`;
-    linkEl.click();
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `steuererklaerung-2025-${p.lastName}.xml`;
+    link.click();
     URL.revokeObjectURL(url);
   };
 
-  const downloadSummary = () => {
-    const p = data.personal;
-    const a = data.address;
-    const lines = [];
-    lines.push('═══════════════════════════════════════════');
-    lines.push('  STEUERWERT – Steuererklärung 2025');
-    lines.push('═══════════════════════════════════════════\n');
-    lines.push('📋 PERSÖNLICHE DATEN');
-    lines.push(`  Name: ${p.firstName} ${p.lastName}`);
-    lines.push(`  Geburtsdatum: ${p.birthDate}`);
-    lines.push(`  Steuerklasse: ${inc.taxClass}`);
-    lines.push(`  Familienstand: ${p.maritalStatus}`);
-    lines.push(`  Kinder: ${p.children}`);
-    lines.push('');
-    lines.push('📍 ADRESSE & FINANZAMT');
-    lines.push(`  ${a.street}, ${a.plz} ${a.city}`);
-    lines.push(`  Finanzamt: ${fa?.name}`);
-    lines.push(`  FA-Nr.: ${fa?.nummer}`);
-    lines.push(`  FA-Adresse: ${fa?.adresse}`);
-    lines.push(`  FA-Telefon: ${fa?.telefon}`);
-    lines.push('');
-    lines.push('💰 EINKÜNFTE');
-    lines.push(`  Bruttogehalt: ${salary} €`);
-    lines.push(`  Weitere Einkünfte: ${otherIncome} €`);
-    lines.push(`  Gesamt: ${totalIncome} €`);
-    lines.push('');
-    lines.push('📄 WERBUNGSKOSTEN');
-    lines.push(`  Fahrt zur Arbeit: ${exp.commuting || 0} km`);
-    lines.push(`  Home-Office: ${exp.homeOffice || 0} Tage`);
-    lines.push(`  Arbeitsmittel: ${parseFloat(exp.workMaterials) || 0} €`);
-    lines.push(`  Fortbildung: ${parseFloat(exp.training) || 0} €`);
-    lines.push('');
-    lines.push('🏠 SONDERAUSGABEN');
-    lines.push(`  Spenden: ${parseFloat(sp.donations) || 0} €`);
-    lines.push(`  Handwerker: ${parseFloat(sp.craftsmen) || 0} €`);
-    lines.push(`  Haushaltsnahe: ${parseFloat(sp.householdServices) || 0} €`);
-    lines.push('');
-    lines.push('💉 VORSORGE');
-    lines.push(`  Krankenversicherung: ${parseFloat(he.healthInsurance) || 0} €`);
-    lines.push(`  Pflegeversicherung: ${parseFloat(he.nursingInsurance) || 0} €`);
-    lines.push(`  Rentenversicherung: ${parseFloat(he.pensionContributions) || 0} €`);
-    lines.push('');
-    lines.push('💶 VORAUSSICHTLICHE ERSTATTUNG');
-    lines.push(`  ➜ ${estimatedRefund} €`);
-    lines.push('');
-    lines.push(`📅 Erstellt am: ${new Date().toLocaleDateString('de-DE')}`);
-    lines.push('═══════════════════════════════════════════');
-    lines.push('  Erstellt mit SteuerWert');
-    lines.push('  https://steuerwert.app');
-    lines.push('═══════════════════════════════════════════\n');
-    const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const linkEl = document.createElement('a');
-    linkEl.href = url;
-    linkEl.download = `steuerwert-zusammenfassung-${data.personal.lastName}.txt`;
-    linkEl.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const inc = data.income;
-  const exp = data.expenses;
-  const sp = data.special;
-  const he = data.health;
-  const a = data.address;
-  const p = data.personal;
-
   return (
-    <div className="wizard-step-content">
-      <StepIndicator current={7} />
-      <h2 className="wizard-step-title">Einreichen beim Finanzamt</h2>
-      <p className="wizard-step-desc">Deine Steuererklärung ist bereit für den Versand an dein Finanzamt.</p>
-
-      {/* Finanzamt Info Box */}
-      <div className="submit-fa-card">
-        <div className="submit-fa-icon">🏛️</div>
-        <div>
-          <h4>Dein zuständiges Finanzamt</h4>
-          <p className="submit-fa-name">{fa?.name} – FA-Nr. {fa?.nummer}</p>
-          <p className="submit-fa-address">{fa?.adresse}</p>
-          <p className="submit-fa-phone">📞 {fa?.telefon}</p>
-        </div>
-      </div>
-
-      <div className="submit-actions">
-        <div className="submit-action-card" onClick={downloadXML}>
-          <div className="submit-action-icon">📤</div>
-          <h4>ELSTER-XML exportieren</h4>
-          <p>Erzeuge eine ELSTER-konforme XML-Datei zum Import in Ihr Elster-Portal</p>
-        </div>
-        <div className="submit-action-card" onClick={downloadSummary}>
-          <div className="submit-action-icon">📄</div>
-          <h4>Zusammenfassung (.txt)</h4>
-          <p>Professionelle Zusammenfassung aller Daten für deine Unterlagen</p>
-        </div>
-      </div>
-
-      <div className="submit-guide">
-        <h3>📋 So sendest du deine Steuererklärung an das Finanzamt</h3>
-        <div className="submit-guide-steps">
-          <div className="submit-guide-step">
-            <span className="submit-guide-num">1</span>
-            <div>
-              <strong>ELSTER-Portal öffnen</strong>
-              <p>Gehe auf <a href="https://www.elster.de" target="_blank" rel="noopener">www.elster.de</a> und melde dich mit deinem ELSTER-Zertifikat an.</p>
-            </div>
-          </div>
-          <div className="submit-guide-step">
-            <span className="submit-guide-num">2</span>
-            <div>
-              <strong>XML importieren</strong>
-              <p>Wähle "Steuererklärung importieren" und lade die heruntergeladene XML-Datei hoch.</p>
-            </div>
-          </div>
-          <div className="submit-guide-step">
-            <span className="submit-guide-num">3</span>
-            <div>
-              <strong>Prüfen & Unterschreiben</strong>
-              <p>Überprüfe alle Daten in ELSTER und unterschreibe digital mit deinem Zertifikat.</p>
-            </div>
-          </div>
-          <div className="submit-guide-step">
-            <span className="submit-guide-num">4</span>
-            <div>
-              <strong>Absenden an FA {fa?.name}</strong>
-              <p>Die Daten werden automatisch an das für dich zuständige Finanzamt ({fa?.name}) gesendet.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Erstattungsvorschau */}
-      <div className="submit-refund-preview">
-        <div className="submit-refund-content">
-          <span className="submit-refund-label">Voraussichtliche Erstattung</span>
-          <span className="submit-refund-amount">{estimatedRefund.toLocaleString('de-DE')} €</span>
-          <span className="submit-refund-hint">Basierend auf deinen Angaben – Berechnung durch das Finanzamt ist verbindlich.</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SummarySection({ title, children }) {
-  return (
-    <div className="summary-section">
-      <h4 className="summary-section-title">{title}</h4>
-      {children}
-    </div>
-  );
-}
-
-function SummaryRow({ label, value }) {
-  return (
-    <div className="summary-row">
-      <span className="summary-label">{label}</span>
-      <span className="summary-value">{value}</span>
-    </div>
-  );
-}
-
-function SubmissionView({ data, onBack }) {
-  const fa = data.address.finanzamt;
-  const salary = parseFloat(data.income.salary) || 0;
-  const estimatedRefund = Math.max(0, Math.round(salary * 0.12 + 1000));
-
-  return (
-    <div className="wizard">
-      <div className="wizard-header">
-        <div className="container wizard-header__inner">
-          <button className="wizard-back" onClick={onBack}>
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M15 10H5M5 10l5-5M5 10l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+    <div className="wizard-chat">
+      <div className="chat-header">
+        <div className="container chat-header__inner">
+          <button className="chat-back" onClick={onBack}>
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M15 10H5M5 10l5-5M5 10l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
             Dashboard
           </button>
-          <span className="wizard-brand">SteuerWert</span>
+          <span className="chat-brand">SteuerWert</span>
           <div />
         </div>
       </div>
-      <div className="wizard-result">
-        <div className="container">
-          <div className="result-card">
-            <div className="result-icon">🎉</div>
-            <h2 className="result-title">Steuererklärung fertig!</h2>
-            <div className="result-refund">
-              <span className="result-refund-label">Voraussichtliche Erstattung</span>
-              <span className="result-refund-amount">{estimatedRefund.toLocaleString('de-DE')} €</span>
-            </div>
-            <div className="result-fa">
-              <p>📬 Zuständig: <strong>{fa?.name}</strong> (FA-Nr. {fa?.nummer})</p>
-              <p>📍 {fa?.adresse}</p>
-            </div>
-            <p className="result-desc">
-              Exportiere die XML-Datei und reiche sie über das ELSTER-Portal ein.
-            </p>
-            <button className="btn btn-primary" onClick={onBack}>Zurück zum Dashboard</button>
+      <div className="chat-body" style={{ justifyContent: 'center', textAlign: 'center' }}>
+        <div className="chat-result">
+          <div className="chat-result-icon">🎉</div>
+          <h2 className="chat-result-title">Geschafft!</h2>
+          <div className="chat-result-refund">
+            <span className="chat-result-label">Voraussichtliche Erstattung</span>
+            <span className="chat-result-amount">{estimatedRefund.toLocaleString('de-DE')} €</span>
           </div>
+          {fa && (
+            <div className="chat-result-fa">
+              <p>🏛️ {fa.name} (FA-Nr. {fa.nummer})</p>
+              <p>📬 {fa.adresse}</p>
+            </div>
+          )}
+          <button className="btn btn-primary" onClick={downloadXML} style={{ width: '100%', marginBottom: '0.75rem' }}>
+            📥 ELSTER-XML exportieren
+          </button>
+          <p className="chat-result-hint">
+            Importiere die XML-Datei in dein ELSTER-Portal unter <strong>www.elster.de</strong> und sende sie an dein Finanzamt.
+          </p>
+          <button className="btn btn-outline" onClick={onBack} style={{ width: '100%' }}>
+            Zum Dashboard
+          </button>
         </div>
       </div>
     </div>

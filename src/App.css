@@ -2062,3 +2062,508 @@
     text-align: left;
   }
 }
+
+/* ═══════════════════════════════════════════
+   CHAT WIZARD (Taxfix-Style)
+   ═══════════════════════════════════════════ */
+.wizard-chat {
+  min-height: 100vh;
+  background: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-header {
+  background: white;
+  border-bottom: 1px solid var(--color-border);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.chat-header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+}
+
+.chat-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  color: var(--color-text-primary);
+  background: var(--color-surface-alt);
+  border: none;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+.chat-back:hover {
+  background: var(--color-border);
+}
+
+.chat-brand {
+  font-weight: var(--weight-bold);
+  font-size: var(--text-body);
+}
+
+.chat-progress-text {
+  font-size: var(--text-small);
+  color: var(--color-text-secondary);
+  font-weight: var(--weight-medium);
+}
+
+.chat-progress-bar {
+  height: 3px;
+  background: #E8E6E4;
+}
+
+.chat-progress-fill {
+  height: 100%;
+  background: var(--color-primary-dark);
+  transition: width 0.4s ease;
+}
+
+.chat-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-lg) 0 var(--space-2xl);
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-container {
+  max-width: 560px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ── Welcome ── */
+.chat-welcome {
+  text-align: center;
+  padding: var(--space-3xl) 0 var(--space-xl);
+}
+
+.chat-tax-logo {
+  margin-bottom: var(--space-lg);
+}
+
+.chat-title {
+  font-size: var(--text-heading);
+  font-weight: var(--weight-bold);
+  line-height: var(--line-tight);
+  margin-bottom: var(--space-sm);
+}
+
+.chat-subtitle {
+  font-size: var(--text-body);
+  color: var(--color-text-secondary);
+  line-height: var(--line-normal);
+  margin-bottom: var(--space-xl);
+  max-width: 360px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.chat-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  max-width: 300px;
+  margin: 0 auto;
+}
+
+.chat-action-btn {
+  width: 100%;
+  justify-content: center;
+}
+
+/* ── Question ── */
+.chat-question {
+  margin-bottom: var(--space-lg);
+}
+
+.chat-bubble {
+  background: #F0EEED;
+  border-radius: 16px 16px 16px 4px;
+  padding: var(--space-md) var(--space-lg);
+  margin-bottom: var(--space-md);
+  max-width: 90%;
+}
+
+.chat-bubble p {
+  font-size: var(--text-body);
+  line-height: var(--line-normal);
+  color: var(--color-text-primary);
+}
+
+.chat-hint {
+  font-size: var(--text-small) !important;
+  color: var(--color-text-secondary) !important;
+  margin-top: var(--space-xs);
+}
+
+/* ── Input Area ── */
+.chat-input-area {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+  background: white;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 4px;
+  transition: border-color var(--transition-fast);
+}
+
+.chat-input-area:focus-within {
+  border-color: var(--color-primary-dark);
+}
+
+.chat-input {
+  flex: 1;
+  padding: 12px 14px;
+  border: none;
+  font-size: var(--text-body);
+  font-family: inherit;
+  outline: none;
+  background: transparent;
+  color: var(--color-text-primary);
+}
+
+.chat-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.chat-send {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--color-text-primary);
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.chat-send:hover:not(:disabled) {
+  background: #9DE058;
+  transform: scale(1.05);
+}
+
+.chat-send:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* ── Yes/No Buttons ── */
+.chat-actions-row {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+
+.chat-btn-choice {
+  flex: 1;
+  padding: 14px 20px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+  border: 2px solid var(--color-border);
+  background: white;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+}
+
+.chat-btn-choice:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.chat-btn--yes:hover {
+  border-color: var(--color-primary-dark);
+  background: var(--color-primary-bg);
+}
+
+.chat-btn--no:hover {
+  border-color: #E74C3C;
+  background: var(--color-support-red-light);
+}
+
+.chat-btn-icon {
+  font-size: 1.1rem;
+}
+
+/* ── Choice Grid ── */
+.chat-options-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+
+.chat-option-btn {
+  padding: 14px 20px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  border: 2px solid var(--color-border);
+  background: white;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+  text-align: left;
+}
+
+.chat-option-btn:hover {
+  border-color: var(--color-primary-dark);
+  background: var(--color-primary-bg);
+  transform: translateX(4px);
+}
+
+/* ── Document Upload ── */
+.chat-doc-upload {
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  background: white;
+  margin-bottom: var(--space-sm);
+}
+
+.chat-doc-upload:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-bg);
+}
+
+.chat-doc-upload p {
+  margin-top: var(--space-sm);
+  font-size: var(--text-caption);
+  color: var(--color-text-secondary);
+}
+
+.chat-doc-list {
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  margin-bottom: var(--space-sm);
+}
+
+.chat-doc-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xs) 0;
+  font-size: var(--text-caption);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.chat-doc-item:last-child {
+  border-bottom: none;
+}
+
+.chat-doc-size {
+  color: var(--color-text-secondary);
+  margin-left: auto;
+}
+
+/* ── Finanzamt Card ── */
+.chat-fa-card {
+  display: flex;
+  gap: var(--space-md);
+  background: var(--color-primary-bg);
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-md);
+}
+
+.chat-fa-icon {
+  font-size: 2rem;
+}
+
+.chat-fa-info strong {
+  display: block;
+  font-size: var(--text-body);
+  margin-bottom: var(--space-xs);
+}
+
+.chat-fa-info p {
+  font-size: var(--text-caption);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.chat-fa-info code {
+  background: white;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  font-weight: var(--weight-bold);
+  color: var(--color-primary-dark);
+}
+
+/* ── Summary Card ── */
+.chat-summary-card {
+  background: white;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-md);
+}
+
+.chat-summary-section {
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.chat-summary-section:last-child {
+  border-bottom: none;
+}
+
+.chat-summary-section h4 {
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-secondary);
+  margin-bottom: 2px;
+}
+
+.chat-summary-section p {
+  font-size: var(--text-caption);
+  color: var(--color-text-primary);
+  line-height: 1.5;
+}
+
+.chat-summary-fa {
+  color: var(--color-primary-dark) !important;
+  font-weight: var(--weight-semibold);
+}
+
+/* ── Refund Teaser ── */
+.chat-refund-teaser {
+  background: linear-gradient(135deg, var(--color-primary) 0%, #CEF5A4 100%);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  text-align: center;
+  margin-bottom: var(--space-md);
+}
+
+.chat-refund-label {
+  display: block;
+  font-size: var(--text-caption);
+  color: var(--color-text-primary);
+  opacity: 0.7;
+  margin-bottom: 4px;
+}
+
+.chat-refund-value {
+  display: block;
+  font-size: 2rem;
+  font-weight: var(--weight-heavy);
+  color: var(--color-primary-dark);
+}
+
+.chat-refund-note {
+  display: block;
+  font-size: var(--text-small);
+  color: var(--color-text-primary);
+  opacity: 0.5;
+  margin-top: 4px;
+}
+
+/* ── Result Page ── */
+.chat-result {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: var(--space-xl) 0;
+}
+
+.chat-result-icon {
+  font-size: 3rem;
+  margin-bottom: var(--space-md);
+}
+
+.chat-result-title {
+  font-size: var(--text-heading);
+  font-weight: var(--weight-bold);
+  margin-bottom: var(--space-lg);
+}
+
+.chat-result-refund {
+  background: var(--color-primary-bg);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-lg);
+}
+
+.chat-result-label {
+  display: block;
+  font-size: var(--text-caption);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-xs);
+}
+
+.chat-result-amount {
+  display: block;
+  font-size: 2.5rem;
+  font-weight: var(--weight-heavy);
+  color: var(--color-primary-dark);
+}
+
+.chat-result-fa {
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  margin-bottom: var(--space-lg);
+  text-align: center;
+}
+
+.chat-result-fa p {
+  font-size: var(--text-caption);
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+.chat-result-hint {
+  font-size: var(--text-small);
+  color: var(--color-text-muted);
+  line-height: var(--line-normal);
+  margin-bottom: var(--space-md);
+}
+
+/* ── Remove old wizard styles ── */
+.wizard-steps, .wizard-form-grid, .wizard-nav,
+.wizard-step-content, .wizard-summary, .summary-section,
+.wizard-back, .wizard-brand, .wizard-step-indicator,
+.doc-upload-area, .doc-list, .doc-requirements,
+.submit-fa-card, .submit-actions, .submit-guide,
+.submit-refund-preview, .result-fa,
+.finanzamt-card {
+  /* Old styles kept but hidden under new chat UI */
+}
+
+@media (max-width: 768px) {
+  .chat-actions-row {
+    flex-direction: column;
+  }
+
+  .chat-bubble {
+    max-width: 100%;
+  }
+
+  .chat-welcome {
+    padding-top: var(--space-2xl);
+  }
+}
