@@ -1673,3 +1673,392 @@
     display: none;
   }
 }
+
+/* ═══════════════════════════════════════════
+   TAX WIZARD – Address & Finanzamt
+   ═══════════════════════════════════════════ */
+.wizard-field-full {
+  grid-column: 1 / -1;
+}
+
+.finanzamt-card {
+  margin-top: var(--space-lg);
+  background: linear-gradient(135deg, var(--color-primary-bg) 0%, #F0FFD4 100%);
+  border-radius: var(--radius-lg);
+  border: 2px solid var(--color-primary);
+  overflow: hidden;
+}
+
+.finanzamt-card--error {
+  background: var(--color-support-red-light);
+  border-color: #E74C3C;
+  padding: var(--space-lg);
+  text-align: center;
+  font-size: var(--text-caption);
+  color: #C0392B;
+}
+
+.finanzamt-card-header {
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--color-primary-light);
+}
+
+.finanzamt-badge {
+  display: inline-block;
+  background: var(--color-primary);
+  padding: 4px 12px;
+  border-radius: var(--radius-round);
+  font-size: var(--text-small);
+  font-weight: var(--weight-semibold);
+}
+
+.finanzamt-card-body {
+  padding: var(--space-md) var(--space-lg);
+}
+
+.finanzamt-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-xs) 0;
+  border-bottom: 1px solid rgba(12, 11, 10, 0.06);
+  font-size: var(--text-caption);
+}
+
+.finanzamt-row:last-child {
+  border-bottom: none;
+}
+
+.finanzamt-label {
+  color: var(--color-text-secondary);
+  font-weight: var(--weight-medium);
+}
+
+.finanzamt-value {
+  font-weight: var(--weight-semibold);
+  text-align: right;
+}
+
+.finanzamt-nummer {
+  font-family: monospace;
+  font-size: var(--text-body);
+  color: var(--color-primary-dark);
+  background: white;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+}
+
+/* ═══════════════════════════════════════════
+   DOCUMENTS
+   ═══════════════════════════════════════════ */
+.doc-upload-area {
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2xl);
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  margin-bottom: var(--space-lg);
+}
+
+.doc-upload-area:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-bg);
+}
+
+.doc-upload-text {
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+  margin: var(--space-md) 0 var(--space-xs);
+}
+
+.doc-upload-hint {
+  font-size: var(--text-small);
+  color: var(--color-text-secondary);
+}
+
+.doc-list {
+  margin-bottom: var(--space-lg);
+}
+
+.doc-list-title {
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-sm);
+}
+
+.doc-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-surface);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-xs);
+}
+
+.doc-icon {
+  font-size: 1.2rem;
+}
+
+.doc-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.doc-name {
+  font-size: var(--text-caption);
+  font-weight: var(--weight-medium);
+}
+
+.doc-size {
+  font-size: var(--text-small);
+  color: var(--color-text-secondary);
+}
+
+.doc-remove {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.doc-remove:hover {
+  background: var(--color-support-red-light);
+  color: #C0392B;
+}
+
+.doc-requirements {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+}
+
+.doc-requirements h4 {
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+  margin-bottom: var(--space-sm);
+}
+
+.doc-requirements ul {
+  list-style: none;
+  padding: 0;
+}
+
+.doc-requirements li {
+  padding: var(--space-xs) 0;
+  font-size: var(--text-caption);
+  color: var(--color-text-secondary);
+}
+
+.doc-note {
+  margin-top: var(--space-md);
+  font-size: var(--text-small);
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+/* ═══════════════════════════════════════════
+   SUBMIT / EINREICHEN
+   ═══════════════════════════════════════════ */
+.submit-fa-card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  background: var(--color-primary-bg);
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-lg);
+}
+
+.submit-fa-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.submit-fa-card h4 {
+  font-size: var(--text-body);
+  font-weight: var(--weight-bold);
+  margin-bottom: var(--space-xs);
+}
+
+.submit-fa-name {
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semibold);
+  color: var(--color-primary-dark);
+}
+
+.submit-fa-address, .submit-fa-phone {
+  font-size: var(--text-small);
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+.submit-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
+}
+
+.submit-action-card {
+  background: white;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.submit-action-card:hover {
+  border-color: var(--color-primary-dark);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-elevated);
+}
+
+.submit-action-icon {
+  font-size: 2rem;
+  margin-bottom: var(--space-sm);
+}
+
+.submit-action-card h4 {
+  font-size: var(--text-body);
+  font-weight: var(--weight-bold);
+  margin-bottom: var(--space-xs);
+}
+
+.submit-action-card p {
+  font-size: var(--text-small);
+  color: var(--color-text-secondary);
+  line-height: var(--line-normal);
+}
+
+.submit-guide {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  margin-bottom: var(--space-xl);
+}
+
+.submit-guide h3 {
+  font-size: var(--text-body);
+  font-weight: var(--weight-bold);
+  margin-bottom: var(--space-lg);
+}
+
+.submit-guide-steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.submit-guide-step {
+  display: flex;
+  gap: var(--space-md);
+  align-items: flex-start;
+}
+
+.submit-guide-num {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: var(--weight-bold);
+  font-size: var(--text-caption);
+  flex-shrink: 0;
+}
+
+.submit-guide-step strong {
+  display: block;
+  font-size: var(--text-caption);
+  margin-bottom: 2px;
+}
+
+.submit-guide-step p {
+  font-size: var(--text-small);
+  color: var(--color-text-secondary);
+  line-height: var(--line-normal);
+}
+
+.submit-guide-step a {
+  color: var(--color-primary-dark);
+  text-decoration: underline;
+}
+
+.submit-refund-preview {
+  background: linear-gradient(135deg, var(--color-primary) 0%, #CEF5A4 100%);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  text-align: center;
+}
+
+.submit-refund-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.submit-refund-label {
+  font-size: var(--text-caption);
+  color: var(--color-text-primary);
+  opacity: 0.7;
+}
+
+.submit-refund-amount {
+  font-size: 2rem;
+  font-weight: var(--weight-heavy);
+  color: var(--color-primary-dark);
+}
+
+.submit-refund-hint {
+  font-size: var(--text-small);
+  color: var(--color-text-primary);
+  opacity: 0.6;
+}
+
+.result-fa {
+  background: var(--color-primary-bg);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  margin-bottom: var(--space-lg);
+  text-align: center;
+}
+
+.result-fa p {
+  font-size: var(--text-caption);
+  color: var(--color-text-primary);
+  line-height: 1.6;
+}
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .submit-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .finanzamt-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .finanzamt-value {
+    text-align: left;
+  }
+}
