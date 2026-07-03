@@ -4,6 +4,8 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider,
   OAuthProvider,
   signOut,
@@ -13,16 +15,49 @@ import { auth } from '../firebase/config';
 
 const AuthContext = createContext(null);
 
+const LOADING_TIMEOUT = 5000;
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
+    let timeoutId = setTimeout(() => {
+      console.warn('Firebase auth timeout – showing UI anyway');
       setLoading(false);
-    });
-    return unsubscribe;
+    }, LOADING_TIMEOUT);
+
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      (firebaseUser) => {
+        setUser(firebaseUser);
+        setLoading(false);
+        if (timeoutId) clearTimeout(timeoutId);
+      },
+      (error) => {
+        console.error('Firebase auth error:', error);
+        setLoading(false);
+        if (timeoutId) clearTimeout(timeoutId);
+      }
+    );
+
+    // Handle redirect result (Apple Sign-In on mobile)
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) {
+          setUser(result.user);
+          setLoading(false);
+          if (timeoutId) clearTimeout(timeoutId);
+        }
+      })
+      .catch((error) => {
+        console.warn('Redirect sign-in result:', error.code);
+      });
+
+    return () => {
+      unsubscribe();
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, []);
 
   const loginWithEmail = (email, password) =>
@@ -31,16 +66,37 @@ export function AuthProvider({ children }) {
   const registerWithEmail = (email, password) =>
     createUserWithEmailAndPassword(auth, email, password);
 
-  const loginWithGoogle = () => {
+  const loginWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
-    return signInWithPopup(auth, provider);
+    try {
+      return await signInWithPopup(auth, provider);
+    } catch (err) {
+      if (
+        err.code === 'auth/operation-not-supported-in-this-environment' ||
+        err.code === 'auth/web-context-unsupported'
+      ) {
+        return signInWithRedirect(auth, provider);
+      }
+      throw err;
+    }
   };
 
-  const loginWithApple = () => {
+  const loginWithApple = async () => {
     const provider = new OAuthProvider('apple.com');
     provider.addScope('email');
     provider.addScope('name');
-    return signInWithPopup(auth, provider);
+    try {
+      return await signInWithPopup(auth, provider);
+    } catch (err) {
+      if (
+        err.code === 'auth/operation-not-supported-in-this-environment' ||
+        err.code === 'auth/web-context-unsupported' ||
+        err.code === 'auth/popup-blocked'
+      ) {
+        return signInWithRedirect(auth, provider);
+      }
+      throw err;
+    }
   };
 
   const logout = () => signOut(auth);
@@ -49,7 +105,16 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, loginWithEmail, registerWithEmail, loginWithGoogle, loginWithApple, logout, resetPassword }}
+      value={{
+        user,
+        loading,
+        loginWithEmail,
+        registerWithEmail,
+        loginWithGoogle,
+        loginWithApple,
+        logout,
+        resetPassword,
+      }}
     >
       {children}
     </AuthContext.Provider>

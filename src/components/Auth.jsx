@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Auth({ isOpen, onClose, onLoginSuccess }) {
@@ -10,6 +10,17 @@ export default function Auth({ isOpen, onClose, onLoginSuccess }) {
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
 
+  // Reset mode when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setMode('select');
+      setEmail('');
+      setPassword('');
+      setError('');
+      setSuccessMsg('');
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleOverlayClick = (e) => {
@@ -18,13 +29,6 @@ export default function Auth({ isOpen, onClose, onLoginSuccess }) {
 
   const handleClose = () => {
     onClose();
-    setTimeout(() => {
-      setMode('select');
-      setEmail('');
-      setPassword('');
-      setError('');
-      setSuccessMsg('');
-    }, 200);
   };
 
   const handleEmailAuth = async (e) => {
@@ -40,8 +44,7 @@ export default function Auth({ isOpen, onClose, onLoginSuccess }) {
       onLoginSuccess?.();
       handleClose();
     } catch (err) {
-      const msg = getErrorMessage(err.code);
-      setError(msg);
+      setError(getErrorMessage(err.code));
     } finally {
       setLoading(false);
     }
@@ -55,8 +58,7 @@ export default function Auth({ isOpen, onClose, onLoginSuccess }) {
       onLoginSuccess?.();
       handleClose();
     } catch (err) {
-      const msg = getErrorMessage(err.code);
-      setError(msg);
+      setError(getErrorMessage(err.code));
     } finally {
       setLoading(false);
     }
@@ -70,8 +72,7 @@ export default function Auth({ isOpen, onClose, onLoginSuccess }) {
       onLoginSuccess?.();
       handleClose();
     } catch (err) {
-      const msg = getErrorMessage(err.code);
-      setError(msg);
+      setError(getErrorMessage(err.code));
     } finally {
       setLoading(false);
     }
@@ -86,8 +87,7 @@ export default function Auth({ isOpen, onClose, onLoginSuccess }) {
       setSuccessMsg('E-Mail zum Zurücksetzen wurde gesendet.');
       setMode('email');
     } catch (err) {
-      const msg = getErrorMessage(err.code);
-      setError(msg);
+      setError(getErrorMessage(err.code));
     } finally {
       setLoading(false);
     }
@@ -127,6 +127,7 @@ export default function Auth({ isOpen, onClose, onLoginSuccess }) {
 
         {mode === 'select' && (
           <div className="auth-options">
+            {/* E-Mail Button – Taxfix Style */}
             <button className="auth-btn auth-btn--email" onClick={() => { setError(''); setMode('email'); }}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                 <rect x="1" y="3" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="1.5"/>
@@ -135,20 +136,22 @@ export default function Auth({ isOpen, onClose, onLoginSuccess }) {
               Mit E-Mail-Adresse fortfahren
             </button>
 
+            {/* Google Button – Taxfix Style */}
             <button className="auth-btn auth-btn--google" onClick={handleGoogleAuth} disabled={loading}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                 <path d="M18.4 10.23c0-.68-.06-1.34-.17-1.97H10v3.73h4.71a4.43 4.43 0 0 1-1.92 2.91v2.42h3.11c1.82-1.68 2.87-4.15 2.87-7.09z" fill="#4285F4"/>
-                <path d="M10 19c2.6 0 4.78-.86 6.37-2.33l-3.11-2.42c-.86.58-1.96.92-3.26.92-2.5 0-4.63-1.69-5.38-3.97H1.4v2.5A9.6 9.6 0 0 0 10 19z" fill="#34A853"/>
-                <path d="M4.62 11.2a5.78 5.78 0 0 1 0-3.7v-2.5H1.4a9.6 9.6 0 0 0 0 8.7l3.22-2.5z" fill="#FBBC05"/>
-                <path d="M10 3.83c1.42 0 2.69.49 3.69 1.44l2.77-2.77C14.78.99 12.6 0 10 0 6.11 0 2.81 2.22 1.4 5.5l3.22 2.5C5.37 5.52 7.5 3.83 10 3.83z" fill="#EA4335"/>
+                <path d="M10 19c2.6 0 4.78-.86 6.37-2.33l-3.11-2.42c-.86.58-1.96.92-3.26.92-2.5 0-4.63-1.69-5.39-3.97H1.38v2.5C3.01 16.92 6.3 19 10 19z" fill="#34A853"/>
+                <path d="M4.61 13.2a5.86 5.86 0 0 1 0-3.74v-2.5H1.38a9.96 9.96 0 0 0 0 8.74l3.23-2.5z" fill="#FBBC05"/>
+                <path d="M10 4.09c1.32 0 2.5.45 3.44 1.35l2.58-2.59C14.66 1.2 12.46.2 10 .2 6.3.2 3.01 2.28 1.38 5.2l3.23 2.5C5.37 5.78 7.5 4.09 10 4.09z" fill="#EA4335"/>
               </svg>
               Mit Google fortfahren
             </button>
 
+            {/* Apple Button – Taxfix Style (black) */}
             <button className="auth-btn auth-btn--apple" onClick={handleAppleAuth} disabled={loading}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M15.17 10.6c-.02-2.05 1.67-3.04 1.74-3.09-.95-1.39-2.42-1.58-2.95-1.6-1.25-.13-2.44.74-3.08.74-.63 0-1.62-.72-2.66-.7-1.37.02-2.63.8-3.34 2.03-1.42 2.47-.36 6.13 1.02 8.13.68.98 1.48 2.08 2.54 2.04 1.02-.04 1.4-.66 2.63-.66s1.58.66 2.65.64c1.1-.02 1.8-1 2.47-1.99.77-1.13 1.09-2.22 1.11-2.28-.02-.01-2.13-.82-2.15-3.25z" fill="currentColor"/>
-                <path d="M13.28 3.3c.55-.67.92-1.6.82-2.52-.8.03-1.77.53-2.34 1.2-.52.6-.97 1.56-.85 2.48.9.07 1.82-.45 2.37-1.16z" fill="currentColor"/>
+                <path d="M14.94 10.63c-.02-1.4.62-2.45 1.85-3.2-.7-1.02-1.76-1.6-3.18-1.74-1.35-.13-2.84.8-3.54.8-.72 0-1.88-.76-3.16-.74-1.63.02-3.13.96-3.97 2.44-1.7 2.98-.44 7.4 1.22 9.82.8 1.18 1.75 2.5 3 2.44 1.2-.06 1.67-.8 3.13-.8 1.44 0 1.86.8 3.14.77 1.3-.02 2.13-1.2 2.91-2.38.92-1.36 1.3-2.7 1.32-2.77-.02-.02-2.54-1-2.52-3.64z" fill="white"/>
+                <path d="M12.12 3.2C12.72 2.37 13.1 1.34 13.02.2c-.95.06-2.08.52-2.72 1.22-.56.6-1.05 1.58-.96 2.5 1.02.08 1.97-.38 2.78-1.72z" fill="white"/>
               </svg>
               Mit Apple fortfahren
             </button>
@@ -167,6 +170,7 @@ export default function Auth({ isOpen, onClose, onLoginSuccess }) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                autoFocus
               />
             </div>
             <div className="auth-field">
@@ -183,7 +187,7 @@ export default function Auth({ isOpen, onClose, onLoginSuccess }) {
               />
             </div>
             <button type="submit" className="auth-btn auth-btn--primary" disabled={loading}>
-              {loading ? 'Wird verarbeitet...' : mode === 'register' ? 'Konto erstellen' : 'Anmelden'}
+              {loading ? 'Wird verarbeitet…' : mode === 'register' ? 'Konto erstellen' : 'Anmelden'}
             </button>
             {mode === 'email' && (
               <button type="button" className="auth-link-btn" onClick={() => setMode('forgot')}>
@@ -205,10 +209,11 @@ export default function Auth({ isOpen, onClose, onLoginSuccess }) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                autoFocus
               />
             </div>
             <button type="submit" className="auth-btn auth-btn--primary" disabled={loading}>
-              {loading ? 'Wird gesendet...' : 'Link senden'}
+              {loading ? 'Wird gesendet…' : 'Link senden'}
             </button>
           </form>
         )}
@@ -230,14 +235,14 @@ export default function Auth({ isOpen, onClose, onLoginSuccess }) {
               </button>
             </p>
           )}
-          {mode !== 'select' && mode !== 'forgot' && mode !== 'email' && mode !== 'register' && (
-            <button className="auth-back" onClick={() => { setError(''); setMode('select'); }}>
-              ← Andere Optionen
-            </button>
-          )}
-          {(mode === 'forgot') && (
+          {mode === 'forgot' && (
             <button className="auth-back" onClick={() => { setError(''); setMode('email'); }}>
               ← Zurück zur Anmeldung
+            </button>
+          )}
+          {(mode === 'email' || mode === 'register') && (
+            <button className="auth-back" onClick={() => { setError(''); setMode('select'); }}>
+              ← Andere Anmeldeoptionen
             </button>
           )}
           <p className="auth-legal">
@@ -263,6 +268,8 @@ function getErrorMessage(code) {
     'auth/account-exists-with-different-credential': 'Ein Konto mit dieser E-Mail existiert bereits mit einer anderen Anmeldeart.',
     'auth/operation-not-supported-in-this-environment': 'Apple Anmeldung wird auf diesem Gerät nicht unterstützt. Bitte verwende E-Mail oder Google.',
     'auth/web-context-unsupported': 'Apple Anmeldung wird in diesem Browser nicht unterstützt. Bitte verwende Safari oder einen anderen Browser.',
+    'auth/popup-blocked': 'Popup wurde blockiert. Bitte erlaube Popups in den Browser-Einstellungen.',
+    'auth/unauthorized-domain': 'Diese Domain ist für die Anmeldung nicht freigeschaltet. Bitte kontaktiere den Support.',
   };
   return map[code] || 'Ein Fehler ist aufgetreten. Bitte versuche es später erneut.';
 }
