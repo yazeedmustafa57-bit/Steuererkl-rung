@@ -40,8 +40,15 @@ function validatePLZ(val) {
 }
 
 function validateStreet(val) {
-  if (!val || !val.trim()) return 'Bitte gib deine Straße ein.';
-  if (val.trim().length < 3) return 'Bitte gib eine vollständige Adresse ein.';
+  if (!val) return 'Bitte gib deine Straße und Hausnummer ein.';
+  const cleaned = val.trim().replace(/\s+/g, ' ');
+  if (cleaned.length < 5) return 'Bitte gib eine vollständige Adresse ein (z.B. Musterstraße 42).';
+  // Must contain at least one letter
+  if (!/[a-zA-ZäöüßÄÖÜéèà]/.test(cleaned)) return 'Die Straße muss einen Straßennamen enthalten (z.B. Musterstraße 42).';
+  // Must not be only numbers
+  if (/^[\d\s]+$/.test(cleaned)) return 'Bitte gib auch den Straßennamen ein (z.B. Musterstraße 42).';
+  // Check it's not pure gibberish (no repeated nonsensical chars)
+  if (/^[^a-zA-ZäöüßÄÖÜ]*$/.test(cleaned.replace(/[\d\s,-]+/g, ''))) return 'Bitte gib eine gültige Straßenadresse ein.';
   return null;
 }
 
@@ -162,9 +169,19 @@ export default function TaxWizard({ onBack }) {
   const goNext = useCallback((answer, skipValidation = false) => {
     const q = QUESTIONS[step];
 
+    // Auto-trim text inputs
+    let processedAnswer = answer;
+    if (q.type === 'text' && typeof processedAnswer === 'string') {
+      processedAnswer = processedAnswer.trim().replace(/\s+/g, ' ');
+    }
+    if (q.type === 'num' && typeof processedAnswer === 'string') {
+      processedAnswer = processedAnswer.trim();
+    }
+    const effectiveAnswer = processedAnswer !== undefined ? processedAnswer : input;
+
     // Validate before proceeding
     if (!skipValidation && (q.type === 'text' || q.type === 'num' || q.type === 'date' || q.type === 'plz')) {
-      const val = answer !== undefined ? answer : input;
+      const val = effectiveAnswer;
       const err = validateQuestion(q, val);
       if (err) {
         setValidationError(err);
@@ -180,7 +197,7 @@ export default function TaxWizard({ onBack }) {
       const [s, f] = q.field;
       setData(prev => {
         const d = { ...prev };
-        d[s] = { ...d[s], [f]: answer };
+        d[s] = { ...d[s], [f]: effectiveAnswer };
         if (q.id === 'plz') {
           const fa = findFinanzamtByPLZ(answer);
           if (fa) {
