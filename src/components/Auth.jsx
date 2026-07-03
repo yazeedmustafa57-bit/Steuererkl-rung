@@ -9,6 +9,7 @@ export default function Auth({ isOpen, onClose, onLoginSuccess }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+  const [redirectMsg, setRedirectMsg] = useState('');
 
   // Reset mode when modal opens
   useEffect(() => {
@@ -18,6 +19,7 @@ export default function Auth({ isOpen, onClose, onLoginSuccess }) {
       setPassword('');
       setError('');
       setSuccessMsg('');
+      setRedirectMsg('');
     }
   }, [isOpen]);
 
@@ -34,6 +36,7 @@ export default function Auth({ isOpen, onClose, onLoginSuccess }) {
   const handleEmailAuth = async (e) => {
     e.preventDefault();
     setError('');
+    setRedirectMsg('');
     setLoading(true);
     try {
       if (mode === 'register') {
@@ -52,11 +55,18 @@ export default function Auth({ isOpen, onClose, onLoginSuccess }) {
 
   const handleGoogleAuth = async () => {
     setError('');
+    setRedirectMsg('');
     setLoading(true);
     try {
-      await loginWithGoogle();
-      onLoginSuccess?.();
-      handleClose();
+      const result = await loginWithGoogle();
+      if (result?.user) {
+        onLoginSuccess?.();
+        handleClose();
+      } else {
+        // Redirect-based – show message
+        setRedirectMsg('Weiterleitung zu Google… Bitte warten.');
+        setTimeout(() => onClose(), 500);
+      }
     } catch (err) {
       setError(getErrorMessage(err.code));
     } finally {
@@ -66,11 +76,18 @@ export default function Auth({ isOpen, onClose, onLoginSuccess }) {
 
   const handleAppleAuth = async () => {
     setError('');
+    setRedirectMsg('');
     setLoading(true);
     try {
-      await loginWithApple();
-      onLoginSuccess?.();
-      handleClose();
+      const result = await loginWithApple();
+      if (result?.user) {
+        onLoginSuccess?.();
+        handleClose();
+      } else {
+        // Redirect-based – show message
+        setRedirectMsg('Weiterleitung zu Apple… Bitte warten.');
+        setTimeout(() => onClose(), 500);
+      }
     } catch (err) {
       setError(getErrorMessage(err.code));
     } finally {
@@ -81,11 +98,11 @@ export default function Auth({ isOpen, onClose, onLoginSuccess }) {
   const handleForgotPassword = async (e) => {
     e.preventDefault();
     setError('');
+    setRedirectMsg('');
     setLoading(true);
     try {
       await resetPassword(email);
-      setSuccessMsg('E-Mail zum Zurücksetzen wurde gesendet.');
-      setMode('email');
+      setSuccessMsg('E-Mail zum Zurücksetzen wurde gesendet. Bitte prüfe dein Postfach.');
     } catch (err) {
       setError(getErrorMessage(err.code));
     } finally {
@@ -124,10 +141,10 @@ export default function Auth({ isOpen, onClose, onLoginSuccess }) {
 
         {error && <div className="auth-error">{error}</div>}
         {successMsg && <div className="auth-success">{successMsg}</div>}
+        {redirectMsg && <div className="auth-success">{redirectMsg}</div>}
 
         {mode === 'select' && (
           <div className="auth-options">
-            {/* E-Mail Button – Taxfix Style */}
             <button className="auth-btn auth-btn--email" onClick={() => { setError(''); setMode('email'); }}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                 <rect x="1" y="3" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="1.5"/>
@@ -136,7 +153,6 @@ export default function Auth({ isOpen, onClose, onLoginSuccess }) {
               Mit E-Mail-Adresse fortfahren
             </button>
 
-            {/* Google Button – Taxfix Style */}
             <button className="auth-btn auth-btn--google" onClick={handleGoogleAuth} disabled={loading}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                 <path d="M18.4 10.23c0-.68-.06-1.34-.17-1.97H10v3.73h4.71a4.43 4.43 0 0 1-1.92 2.91v2.42h3.11c1.82-1.68 2.87-4.15 2.87-7.09z" fill="#4285F4"/>
@@ -147,7 +163,6 @@ export default function Auth({ isOpen, onClose, onLoginSuccess }) {
               Mit Google fortfahren
             </button>
 
-            {/* Apple Button – Taxfix Style (black) */}
             <button className="auth-btn auth-btn--apple" onClick={handleAppleAuth} disabled={loading}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                 <path d="M14.94 10.63c-.02-1.4.62-2.45 1.85-3.2-.7-1.02-1.76-1.6-3.18-1.74-1.35-.13-2.84.8-3.54.8-.72 0-1.88-.76-3.16-.74-1.63.02-3.13.96-3.97 2.44-1.7 2.98-.44 7.4 1.22 9.82.8 1.18 1.75 2.5 3 2.44 1.2-.06 1.67-.8 3.13-.8 1.44 0 1.86.8 3.14.77 1.3-.02 2.13-1.2 2.91-2.38.92-1.36 1.3-2.7 1.32-2.77-.02-.02-2.54-1-2.52-3.64z" fill="white"/>
@@ -266,10 +281,15 @@ function getErrorMessage(code) {
     'auth/too-many-requests': 'Zu viele Versuche. Bitte warte kurz.',
     'auth/popup-closed-by-user': 'Der Login wurde abgebrochen.',
     'auth/account-exists-with-different-credential': 'Ein Konto mit dieser E-Mail existiert bereits mit einer anderen Anmeldeart.',
-    'auth/operation-not-supported-in-this-environment': 'Apple Anmeldung wird auf diesem Gerät nicht unterstützt. Bitte verwende E-Mail oder Google.',
-    'auth/web-context-unsupported': 'Apple Anmeldung wird in diesem Browser nicht unterstützt. Bitte verwende Safari oder einen anderen Browser.',
+    'auth/operation-not-supported-in-this-environment': 'Diese Anmeldemethode wird auf diesem Gerät nicht unterstützt. Bitte verwende E-Mail oder Google.',
+    'auth/web-context-unsupported': 'Diese Anmeldemethode wird in diesem Browser nicht unterstützt.',
     'auth/popup-blocked': 'Popup wurde blockiert. Bitte erlaube Popups in den Browser-Einstellungen.',
-    'auth/unauthorized-domain': 'Diese Domain ist für die Anmeldung nicht freigeschaltet. Bitte kontaktiere den Support.',
+    'auth/unauthorized-domain': 'Diese Domain ist für die Anmeldung nicht freigeschaltet. Bitte den Admin kontaktieren.',
+    'auth/operation-not-allowed': 'Apple Anmeldung ist noch nicht eingerichtet. Der Admin muss Apple in der Firebase-Konsole aktivieren. Bitte verwende vorerst E-Mail oder Google.',
+    'auth/admin-restricted-operation': 'Apple Anmeldung ist noch nicht konfiguriert. Bitte verwende E-Mail oder Google.',
+    'auth/redirect-cancelled-by-user': 'Die Anmeldung wurde abgebrochen.',
+    'auth/redirect-operation-pending': 'Eine Anmeldung ist bereits in Bearbeitung. Bitte warte einen Moment.',
+    'auth/invalid-oauth-provider': 'Apple Anmeldung ist nicht richtig konfiguriert.',
   };
   return map[code] || 'Ein Fehler ist aufgetreten. Bitte versuche es später erneut.';
 }

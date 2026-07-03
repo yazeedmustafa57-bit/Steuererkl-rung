@@ -17,6 +17,10 @@ const AuthContext = createContext(null);
 
 const LOADING_TIMEOUT = 5000;
 
+function isMobileBrowser() {
+  return /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -41,7 +45,7 @@ export function AuthProvider({ children }) {
       }
     );
 
-    // Handle redirect result (Apple Sign-In on mobile)
+    // Handle redirect result (Apple/Google Sign-In on mobile)
     getRedirectResult(auth)
       .then((result) => {
         if (result?.user) {
@@ -51,7 +55,8 @@ export function AuthProvider({ children }) {
         }
       })
       .catch((error) => {
-        console.warn('Redirect sign-in result:', error.code);
+        // Ignore errors from getRedirectResult (expected when no redirect happened)
+        console.warn('Redirect sign-in result check:', error.code || error.message);
       });
 
     return () => {
@@ -69,11 +74,16 @@ export function AuthProvider({ children }) {
   const loginWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     try {
+      if (isMobileBrowser()) {
+        // On mobile, use redirect instead of popup
+        return await signInWithRedirect(auth, provider);
+      }
       return await signInWithPopup(auth, provider);
     } catch (err) {
       if (
         err.code === 'auth/operation-not-supported-in-this-environment' ||
-        err.code === 'auth/web-context-unsupported'
+        err.code === 'auth/web-context-unsupported' ||
+        err.code === 'auth/popup-blocked'
       ) {
         return signInWithRedirect(auth, provider);
       }
@@ -86,6 +96,10 @@ export function AuthProvider({ children }) {
     provider.addScope('email');
     provider.addScope('name');
     try {
+      // On mobile, Apple Sign-In works better with redirect
+      if (isMobileBrowser()) {
+        return await signInWithRedirect(auth, provider);
+      }
       return await signInWithPopup(auth, provider);
     } catch (err) {
       if (
