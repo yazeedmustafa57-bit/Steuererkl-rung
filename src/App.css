@@ -4188,3 +4188,25 @@ input:focus-visible {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* ═══════════════════════════════════════════
+   TAXWIZARD – Validation
+   ═══════════════════════════════════════════ */
+.tw-text-input--error {
+  border-color: #E74C3C !important;
+  box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.15) !important;
+}
+
+.tw-validation-error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-top: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  background: #FEEBE7;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-small);
+  color: #C0392B;
+  font-weight: var(--weight-medium);
+  line-height: 1.3;
+}
