@@ -4210,3 +4210,25 @@ input:focus-visible {
   font-weight: var(--weight-medium);
   line-height: 1.3;
 }
+
+/* ═══════════════════════════════════════════
+   TAXWIZARD – PLZ City Hint & Valid State
+   ═══════════════════════════════════════════ */
+.tw-text-input--valid {
+  border-color: var(--color-primary-dark) !important;
+  box-shadow: 0 0 0 3px rgba(54, 137, 59, 0.12) !important;
+}
+
+.tw-plz-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-top: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  background: #ECFFC7;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-small);
+  color: var(--color-primary-dark);
+  font-weight: var(--weight-semibold);
+  line-height: 1.3;
+}

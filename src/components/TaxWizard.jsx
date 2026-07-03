@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { findFinanzamtByPLZ } from '../data/finanzaemter';
+import { findFinanzamtByPLZ, isValidGermanPLZ, findCitiesByPLZ } from '../data/finanzaemter';
 
 // ─── Validation helpers ───
 function validateName(val) {
@@ -35,6 +35,7 @@ function validatePLZ(val) {
   if (!val || !val.trim()) return 'Bitte gib deine Postleitzahl ein.';
   const clean = val.trim().replace(/\s/g, '');
   if (!/^\d{5}$/.test(clean)) return 'Die PLZ muss aus genau 5 Ziffern bestehen.';
+  if (!isValidGermanPLZ(clean)) return 'Diese Postleitzahl existiert nicht. Bitte gib eine gültige deutsche PLZ ein.';
   return null;
 }
 
@@ -182,7 +183,11 @@ export default function TaxWizard({ onBack }) {
         d[s] = { ...d[s], [f]: answer };
         if (q.id === 'plz') {
           const fa = findFinanzamtByPLZ(answer);
-          if (fa) d.address = { ...d.address, plz: answer, city: fa.stadt, finanzamt: fa };
+          if (fa) {
+            d.address = { ...d.address, plz: answer, city: fa.stadt, finanzamt: fa };
+          } else {
+            // Will be caught by validatePLZ, but handle edge case
+          }
         }
         return d;
       });
@@ -378,9 +383,29 @@ function ChoiceQuestion({ q, onSelect, selected }) {
 
 // ─── INPUT (with validation) ───
 function InputQuestion({ q, value, onChange, onSubmit, inputRef, error }) {
+  // For PLZ field, show city name when valid
+  const plzHint = (() => {
+    if (q.id !== 'plz') return null;
+    const clean = value.trim().replace(/\s/g, '');
+    if (!/^\d{5}$/.test(clean)) return null;
+    if (!isValidGermanPLZ(clean)) return null;
+    const cities = findCitiesByPLZ(clean);
+    if (cities.length > 0) return '✓ ' + cities.join(', ');
+    return null;
+  })();
+
   const handleSubmit = (e) => {
     e.preventDefault();
     onSubmit(value);
+  };
+
+  const handleInputChange = (e) => {
+    const v = e.target.value;
+    // Only allow digits for PLZ and num types
+    if (q.type === 'plz' || q.type === 'num') {
+      if (!/^[\d]*$/.test(v) && v !== '') return;
+    }
+    onChange(v);
   };
 
   return (
@@ -397,12 +422,22 @@ function InputQuestion({ q, value, onChange, onSubmit, inputRef, error }) {
                 q.type === 'num' ? 'numeric' :
                 q.type === 'plz' ? 'numeric' : 'text'
               }
-              className={`tw-text-input ${error ? 'tw-text-input--error' : ''}`}
+              className={`tw-text-input ${error ? 'tw-text-input--error' : ''} ${plzHint ? 'tw-text-input--valid' : ''}`}
               placeholder={q.ph}
               value={value}
-              onChange={(e) => onChange(e.target.value)}
+              onChange={handleInputChange}
               autoFocus
+              maxLength={q.type === 'plz' || q.type === 'num' ? 10 : undefined}
             />
+            {plzHint && (
+              <div className="tw-plz-hint">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
+                  <circle cx="7" cy="7" r="6" fill="#36893B"/>
+                  <path d="M4 7l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                {plzHint}
+              </div>
+            )}
             {error && (
               <div className="tw-validation-error">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
@@ -413,7 +448,9 @@ function InputQuestion({ q, value, onChange, onSubmit, inputRef, error }) {
               </div>
             )}
           </div>
-          <button type="submit" className="tw-primary-btn" disabled={!value.trim()}>
+          <button type="submit" className="tw-primary-btn" disabled={
+            q.type === 'plz' ? !plzHint : !value.trim()
+          }>
             Weiter
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{ marginLeft: '6px' }}>
               <path d="M8 4l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>

@@ -424,3 +424,44 @@ export function searchStaedte(query) {
 }
 
 export default finanzaemter;
+
+/**
+ * Prüft, ob eine PLZ in Deutschland existiert (in der Finanzamt-Datenbank)
+ */
+export function isValidGermanPLZ(plz) {
+  if (!plz) return false;
+  const plzNum = parseInt(plz.toString().replace(/\D/g, ''), 10);
+  if (isNaN(plzNum) || plzNum < 1067 || plzNum > 99999) return false;
+
+  return finanzaemter.some(
+    (fa) => plzNum >= fa.plzMin && plzNum <= fa.plzMax
+  );
+}
+
+/**
+ * Gibt alle gültigen PLZ-Bereiche zurück (für UI-Hinweise)
+ */
+export function getPLZRange() {
+  const min = Math.min(...finanzaemter.map(fa => fa.plzMin));
+  const max = Math.max(...finanzaemter.map(fa => fa.plzMax));
+  return { min, max };
+}
+
+/**
+ * Findet Städte zu einer PLZ
+ */
+export function findCitiesByPLZ(plz) {
+  if (!plz) return [];
+  const plzNum = parseInt(plz.toString().replace(/\D/g, ''), 10);
+  if (isNaN(plzNum)) return [];
+
+  const matches = finanzaemter.filter(
+    (fa) => plzNum >= fa.plzMin && plzNum <= fa.plzMax
+  );
+  const seen = new Set();
+  return matches.filter(fa => {
+    if (seen.has(fa.stadt)) return false;
+    seen.add(fa.stadt);
+    return true;
+  }).map(fa => fa.stadt);
+}
