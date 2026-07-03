@@ -42,13 +42,29 @@ function validatePLZ(val) {
 function validateStreet(val) {
   if (!val) return 'Bitte gib deine Straße und Hausnummer ein.';
   const cleaned = val.trim().replace(/\s+/g, ' ');
-  if (cleaned.length < 5) return 'Bitte gib eine vollständige Adresse ein (z.B. Musterstraße 42).';
-  // Must contain at least one letter
-  if (!/[a-zA-ZäöüßÄÖÜéèà]/.test(cleaned)) return 'Die Straße muss einen Straßennamen enthalten (z.B. Musterstraße 42).';
+  if (cleaned.length < 6) return 'Bitte gib eine vollständige Adresse ein (z.B. Musterstraße 42).';
+  // Must contain at least one letter (street name)
+  if (!/[a-zA-ZäöüßÄÖÜéèà]/u.test(cleaned)) return 'Bitte gib einen gültigen Straßennamen ein (z.B. Musterstraße 42).';
   // Must not be only numbers
   if (/^[\d\s]+$/.test(cleaned)) return 'Bitte gib auch den Straßennamen ein (z.B. Musterstraße 42).';
-  // Check it's not pure gibberish (no repeated nonsensical chars)
-  if (/^[^a-zA-ZäöüßÄÖÜ]*$/.test(cleaned.replace(/[\d\s,-]+/g, ''))) return 'Bitte gib eine gültige Straßenadresse ein.';
+  // Must end with a number (house number)
+  const parts = cleaned.split(/\s+/);
+  const lastPart = parts[parts.length - 1];
+  if (!lastPart || !/^[\d]+[a-zA-Z]?$/.test(lastPart.replace(/[,.]$/, ''))) {
+    return 'Bitte füge die Hausnummer hinzu (z.B. Musterstraße 42).';
+  }
+  // Street name part must have letters
+  const streetName = parts.slice(0, -1).join(' ');
+  if (streetName.length < 3 || !/[a-zA-ZäöüßÄÖÜ]/u.test(streetName)) {
+    return 'Bitte gib einen gültigen Straßennamen vor der Hausnummer ein.';
+  }
+  // Check for common German street suffixes
+  const hasStreetSuffix = /(straße|strasse|weg|allee|platz|ring|damm|gasse|chaussee|ufer|hof|zeile|winkel|bogen|steig|pfad|grund|feld|anger|rain|graben|bruch|au|ach|bruck)$/i.test(streetName);
+  // Not required but helps validate
+  // Block pure gibberish
+  if (/^[^a-zA-ZäöüßÄÖÜ]*$/.test(cleaned.replace(/[\d\s,\-./]+/g, ''))) {
+    return 'Bitte gib eine gültige Straßenadresse ein.';
+  }
   return null;
 }
 
