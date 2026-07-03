@@ -3803,3 +3803,388 @@ input:focus-visible {
   background: var(--color-primary);
   color: var(--color-text-primary);
 }
+
+/* ═══════════════════════════════════════════
+   AUTH – Redirect State
+   ═══════════════════════════════════════════ */
+.auth-redirect {
+  background: var(--color-support-blue-light);
+  color: #1a3a8a;
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  margin-bottom: var(--space-md);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-medium);
+  text-align: center;
+}
+
+/* ═══════════════════════════════════════════
+   TAXWIZARD – Enhanced Styles
+   ═══════════════════════════════════════════ */
+.tw-container {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: var(--space-lg);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+}
+
+.tw-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  background: var(--color-bg);
+  padding: var(--space-md) var(--space-lg) var(--space-xs);
+}
+
+.tw-progress-bar {
+  height: 4px;
+  background: var(--color-primary);
+  border-radius: 2px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tw-progress-label {
+  font-size: var(--text-small);
+  color: var(--color-text-muted);
+  margin-top: var(--space-xs);
+  text-align: right;
+}
+
+.tw-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 80px;
+}
+
+.tw-card {
+  width: 100%;
+  background: var(--color-bg);
+  border-radius: var(--radius-xl);
+  animation: fadeInUp 0.4s ease;
+}
+
+.tw-question-page {
+  width: 100%;
+}
+
+.tw-q-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  width: 100%;
+}
+
+.tw-q-icon {
+  font-size: 2.5rem;
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-xs);
+}
+
+.tw-q-title {
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: var(--line-tight);
+  text-align: center;
+  max-width: 360px;
+}
+
+.tw-q-desc {
+  font-size: var(--text-body);
+  color: var(--color-text-secondary);
+  text-align: center;
+  line-height: var(--line-normal);
+  max-width: 360px;
+}
+
+.tw-welcome-icon {
+  margin-bottom: 0.5rem;
+}
+
+.tw-welcome-stats {
+  display: flex;
+  gap: var(--space-xl);
+  margin: var(--space-lg) 0;
+}
+
+.tw-welcome-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.tw-welcome-stat-num {
+  font-size: var(--text-subheading);
+  font-weight: var(--weight-bold);
+  line-height: 1.2;
+}
+
+.tw-welcome-stat-label {
+  font-size: var(--text-small);
+  color: var(--color-text-secondary);
+}
+
+/* ── Choice Buttons ── */
+.tw-q-choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  width: 100%;
+  max-width: 320px;
+  margin-top: var(--space-md);
+}
+
+.tw-choice-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  width: 100%;
+  padding: 16px 20px;
+  background: var(--color-surface);
+  border: 2px solid transparent;
+  border-radius: var(--radius-lg);
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+  text-align: left;
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.tw-choice-btn:hover {
+  background: var(--color-surface-alt);
+  border-color: var(--color-border);
+}
+
+.tw-choice-btn:active {
+  transform: scale(0.98);
+}
+
+.tw-choice-selected {
+  background: var(--color-primary-bg) !important;
+  border-color: var(--color-primary) !important;
+}
+
+.tw-choice-yes:hover {
+  background: #ECFFC7;
+  border-color: var(--color-primary);
+}
+
+.tw-choice-no:hover {
+  background: var(--color-support-red-light);
+  border-color: #F8C677;
+}
+
+/* ── Text Input ── */
+.tw-input-form {
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.tw-text-input {
+  width: 100%;
+  padding: 16px 20px;
+  font-size: var(--text-body-large);
+  font-family: var(--font-family);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  outline: none;
+  transition: border-color var(--transition-fast);
+  text-align: center;
+  background: var(--color-bg);
+}
+
+.tw-text-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(173, 238, 104, 0.2);
+}
+
+/* ── Primary Button ── */
+.tw-primary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  width: 100%;
+  max-width: 320px;
+  padding: 18px 32px;
+  background: var(--color-text-primary);
+  color: white;
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+  border-radius: var(--radius-round);
+  transition: all var(--transition-base);
+  cursor: pointer;
+  border: none;
+}
+
+.tw-primary-btn:hover {
+  background: #2C2B2A;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-elevated);
+}
+
+.tw-primary-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ── Back Button ── */
+.tw-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  color: var(--color-text-secondary);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-medium);
+  margin-top: var(--space-lg);
+  cursor: pointer;
+  background: none;
+  border: none;
+  transition: color var(--transition-fast);
+  align-self: center;
+}
+
+.tw-back-btn:hover {
+  color: var(--color-text-primary);
+}
+
+/* ── Login Link ── */
+.tw-login-link {
+  background: none;
+  border: none;
+  font-size: var(--text-caption);
+  color: var(--color-text-secondary);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.tw-login-link:hover {
+  color: var(--color-text-primary);
+}
+
+/* ── FA Detail ── */
+.tw-fa-detail {
+  background: var(--color-bg);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  text-align: left;
+  line-height: 1.6;
+}
+
+.tw-fa-name {
+  font-weight: var(--weight-bold);
+  font-size: var(--text-body-large);
+  margin-bottom: var(--space-xs);
+}
+
+.tw-fa-addr {
+  font-size: var(--text-caption);
+  color: var(--color-text-secondary);
+}
+
+.tw-fa-tel {
+  font-size: var(--text-caption);
+  color: var(--color-text-secondary);
+}
+
+.tw-fa-nr {
+  font-size: var(--text-small);
+  color: var(--color-text-muted);
+  margin-top: var(--space-xs);
+}
+
+/* ── Summary ── */
+.tw-summary-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  width: 100%;
+  max-width: 360px;
+}
+
+.tw-summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-caption);
+}
+
+.tw-summary-row:last-child {
+  border-bottom: none;
+}
+
+.tw-summary-row span:first-child {
+  color: var(--color-text-secondary);
+}
+
+.tw-summary-row span:last-child {
+  font-weight: var(--weight-semibold);
+}
+
+.tw-refund-box {
+  background: linear-gradient(135deg, var(--color-primary-bg), var(--color-support-blue-light));
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  text-align: center;
+  width: 100%;
+  max-width: 320px;
+}
+
+.tw-refund-label {
+  display: block;
+  font-size: var(--text-caption);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-xs);
+}
+
+.tw-refund-amount {
+  display: block;
+  font-size: 2rem;
+  font-weight: var(--weight-heavy);
+  color: var(--color-primary-dark);
+}
+
+/* ── App Loading State ── */
+.app-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  gap: var(--space-md);
+  background: var(--color-bg);
+}
+
+.app-loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

@@ -2,14 +2,13 @@ import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import TaxWizard from './TaxWizard';
 
-export default function Dashboard({ onLogout }) {
+export default function Dashboard() {
   const { user, logout } = useAuth();
   const [startTax, setStartTax] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
 
   const handleLogout = async () => {
     await logout();
-    onLogout?.();
   };
 
   if (startTax) {

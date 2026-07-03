@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -15,7 +15,7 @@ import { auth } from '../firebase/config';
 
 const AuthContext = createContext(null);
 
-const LOADING_TIMEOUT = 5000;
+const LOADING_TIMEOUT = 8000;
 
 function isMobileBrowser() {
   return /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -24,46 +24,83 @@ function isMobileBrowser() {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    let timeoutId = setTimeout(() => {
-      console.warn('Firebase auth timeout – showing UI anyway');
-      setLoading(false);
+    let cancelled = false;
+
+    const timeoutId = setTimeout(() => {
+      if (!cancelled) {
+        console.warn('Firebase auth timeout – showing UI anyway');
+        setLoading(false);
+      }
     }, LOADING_TIMEOUT);
 
     const unsubscribe = onAuthStateChanged(
       auth,
       (firebaseUser) => {
+        if (cancelled) return;
         setUser(firebaseUser);
         setLoading(false);
-        if (timeoutId) clearTimeout(timeoutId);
+        setError(null);
+        clearTimeout(timeoutId);
       },
-      (error) => {
-        console.error('Firebase auth error:', error);
+      (fbError) => {
+        if (cancelled) return;
+        console.error('Firebase auth error:', fbError);
+        if (fbError.code === 'auth/unauthorized-domain') {
+          setError({
+            type: 'domain',
+            message: `Diese Domain (${window.location.origin}) ist nicht für Firebase Auth freigegeben. Bitte füge sie in der Firebase-Konsole hinzu.`,
+          });
+        } else if (fbError.code?.includes('network') || fbError.message?.includes('network')) {
+          setError({
+            type: 'network',
+            message: 'Netzwerkfehler – bitte prüfe deine Internetverbindung.',
+          });
+        } else {
+          setError({
+            type: 'unknown',
+            message: fbError.message || 'Ein Fehler ist aufgetreten.',
+          });
+        }
         setLoading(false);
-        if (timeoutId) clearTimeout(timeoutId);
+        clearTimeout(timeoutId);
       }
     );
 
     // Handle redirect result (Apple/Google Sign-In on mobile)
     getRedirectResult(auth)
       .then((result) => {
+        if (cancelled) return;
         if (result?.user) {
           setUser(result.user);
           setLoading(false);
-          if (timeoutId) clearTimeout(timeoutId);
+          setError(null);
+          clearTimeout(timeoutId);
         }
       })
-      .catch((error) => {
-        // Ignore errors from getRedirectResult (expected when no redirect happened)
-        console.warn('Redirect sign-in result check:', error.code || error.message);
+      .catch((redirectError) => {
+        if (cancelled) return;
+        if (redirectError.code === 'auth/unauthorized-domain' || redirectError.message?.includes('unauthorized-domain')) {
+          setError({
+            type: 'domain',
+            message: `Diese Domain (${window.location.origin}) ist nicht für Firebase Auth freigegeben. Bitte füge sie in der Firebase-Konsole hinzu.`,
+          });
+          setLoading(false);
+          clearTimeout(timeoutId);
+        }
+        console.warn('Redirect sign-in result check:', redirectError.code || redirectError.message);
       });
 
     return () => {
       unsubscribe();
       if (timeoutId) clearTimeout(timeoutId);
+      cancelled = true;
     };
   }, []);
+
+  const clearAuthError = useCallback(() => setError(null), []);
 
   const loginWithEmail = (email, password) =>
     signInWithEmailAndPassword(auth, email, password);
@@ -73,13 +110,19 @@ export function AuthProvider({ children }) {
 
   const loginWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
     try {
       if (isMobileBrowser()) {
-        // On mobile, use redirect instead of popup
-        return await signInWithRedirect(auth, provider);
+        await signInWithRedirect(auth, provider);
+        return null;
       }
-      return await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      return result;
     } catch (err) {
+      if (err.code === 'auth/unauthorized-domain') {
+        setError({ type: 'domain', message: `Domain nicht autorisiert. Bitte füge ${window.location.origin} in der Firebase-Konsole hinzu.` });
+        throw err;
+      }
       if (
         err.code === 'auth/operation-not-supported-in-this-environment' ||
         err.code === 'auth/web-context-unsupported' ||
@@ -95,19 +138,25 @@ export function AuthProvider({ children }) {
     const provider = new OAuthProvider('apple.com');
     provider.addScope('email');
     provider.addScope('name');
+    provider.setCustomParameters({
+      locale: 'de-DE',
+    });
     try {
-      // On mobile, Apple Sign-In works better with redirect
-      if (isMobileBrowser()) {
-        return await signInWithRedirect(auth, provider);
-      }
-      return await signInWithPopup(auth, provider);
+      // Apple Sign-In works best with redirect for cross-browser compatibility
+      await signInWithRedirect(auth, provider);
+      return null;
     } catch (err) {
       if (
         err.code === 'auth/operation-not-supported-in-this-environment' ||
-        err.code === 'auth/web-context-unsupported' ||
-        err.code === 'auth/popup-blocked'
+        err.code === 'auth/unauthorized-domain'
       ) {
-        return signInWithRedirect(auth, provider);
+        setError({
+          type: 'domain',
+          message: err.code === 'auth/unauthorized-domain'
+            ? `Domain nicht autorisiert. Bitte füge ${window.location.origin} in der Firebase-Konsole hinzu.`
+            : 'Apple Anmeldung wird in diesem Browser nicht unterstützt.',
+        });
+        throw err;
       }
       throw err;
     }
@@ -122,6 +171,8 @@ export function AuthProvider({ children }) {
       value={{
         user,
         loading,
+        authError: error,
+        clearAuthError,
         loginWithEmail,
         registerWithEmail,
         loginWithGoogle,

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { findFinanzamtByPLZ } from '../data/finanzaemter';
 
@@ -30,11 +30,10 @@ const QUESTIONS = [
   { id: 'summary', type: 'summary' },
 ];
 
-// Icon mapping for welcome page stats
 const WELCOME_STATS = [
-  { num: '30', unit: 'Min.' },
-  { num: '4,8', unit: '★' },
-  { num: '8 Mio.+', unit: 'Nutzer' },
+  { num: '30', label: 'Minuten' },
+  { num: '4,8', label: 'Bewertung' },
+  { num: '8 Mio.+', label: 'Nutzer' },
 ];
 
 export default function TaxWizard({ onBack }) {
@@ -51,16 +50,29 @@ export default function TaxWizard({ onBack }) {
   const [input, setInput] = useState('');
   const [done, setDone] = useState(false);
   const [direction, setDirection] = useState('right');
-  const bodyRef = useRef(null);
+  const inputRef = useRef(null);
+  const [showProgress, setShowProgress] = useState(true);
 
-  const isVisible = (q) => {
+  const visibleSteps = QUESTIONS.filter((q, i) => {
     if (!q.if) return true;
     const [s, f] = q.if.field;
     return data[s]?.[f] === q.if.is;
-  };
+  });
 
-  const goNext = (answer) => {
+  const totalQuestions = visibleSteps.length;
+  const currentQ = QUESTIONS[step];
+
+  const isVisible = useCallback((q) => {
+    if (!q.if) return true;
+    const [s, f] = q.if.field;
+    return data[s]?.[f] === q.if.is;
+  }, [data]);
+
+  const goNext = useCallback((answer) => {
     const q = QUESTIONS[step];
+    if (q.id !== 'welcome') {
+      setDirection('right');
+    }
     if (q.field) {
       const [s, f] = q.field;
       setData(prev => {
@@ -85,240 +97,255 @@ export default function TaxWizard({ onBack }) {
     if (next >= QUESTIONS.length) {
       setDone(true);
     } else {
-      setDirection('right');
       setStep(next);
+      setInput('');
+      // Auto-focus input after transition
+      setTimeout(() => inputRef.current?.focus(), 400);
     }
-    setInput('');
-  };
+  }, [step, isVisible]);
 
-  const goBack = () => {
+  const goBack = useCallback(() => {
+    if (step === 0) return;
     setDirection('left');
-    let p = step - 1;
-    while (p >= 0) { if (isVisible(QUESTIONS[p])) break; p--; }
-    if (p >= 0) setStep(p);
-  };
-
-  const currentQ = QUESTIONS[step];
-
-  // Calculate progress
-  const visibleQuestions = QUESTIONS.filter(q => isVisible(q) && q.type !== 'welcome' && q.type !== 'facheck' && q.type !== 'summary');
-  const totalVisible = visibleQuestions.length;
-  let pos = 0;
-  for (let i = 0; i <= step; i++) {
-    if (isVisible(QUESTIONS[i]) && QUESTIONS[i].type !== 'welcome' && QUESTIONS[i].type !== 'facheck' && QUESTIONS[i].type !== 'summary') pos++;
-  }
+    let prev = step - 1;
+    while (prev >= 0) {
+      if (isVisible(QUESTIONS[prev])) break;
+      prev--;
+    }
+    if (prev >= 0) {
+      setStep(prev);
+      setInput('');
+    }
+  }, [step, isVisible]);
 
   if (done) {
     return <ResultView data={data} onBack={onBack} />;
   }
 
-  if (currentQ.type === 'welcome') {
-    return <WelcomePage onStart={() => goNext('yes')} stats={WELCOME_STATS} />;
-  }
+  const q = currentQ;
+  const qIndex = visibleSteps.indexOf(q);
+  const progress = qIndex >= 0 ? ((qIndex + 1) / totalQuestions) * 100 : 0;
 
-  if (currentQ.type === 'facheck') {
-    return <FaCheckPage data={data} onNext={() => goNext('ok')} />;
-  }
-
-  if (currentQ.type === 'summary') {
-    return <SummaryPage data={data} onNext={() => goNext('ok')} />;
-  }
-
-  return (
-    <QuestionPage
-      question={currentQ}
-      data={data}
-      input={input}
-      setInput={setInput}
-      onAnswer={goNext}
-      progress={{ pos, total: totalVisible }}
-      onBack={goBack}
-      direction={direction}
-    />
-  );
-}
-
-// ─── WELCOME PAGE ───
-function WelcomePage({ onStart, stats }) {
-  return (
-    <div className="tw-welcome">
-      <div className="tw-welcome-header">
-        <span className="tw-welcome-title">Steuererklärung 2025</span>
-      </div>
-
-      <div className="tw-welcome-content">
-        <div className="tw-welcome-phone">
-          <div className="tw-phone-mockup">
-            <div className="tw-phone-top">
-              <span className="tw-phone-time">09:41</span>
-              <div className="tw-phone-icons">
-                <svg width="14" height="10" viewBox="0 0 14 10"><rect x="0.5" y="0.5" width="13" height="9" rx="1.5" stroke="#000" strokeWidth="0.8" fill="none"/><rect x="11" y="3" width="2" height="4" rx="0.5" fill="#000"/></svg>
-              </div>
-            </div>
-            <div className="tw-phone-screen">
-              <div className="tw-phone-q">
-                <p className="tw-phone-question">Hattest du 2025<br />berufliche Ausgaben?</p>
-                <div className="tw-phone-btns">
-                  <button className="tw-phone-btn tw-phone-btn-yes">Ja</button>
-                  <button className="tw-phone-btn tw-phone-btn-no">Nein</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="tw-welcome-stats">
-          {stats.map((s, i) => (
-            <div key={i} className="tw-stat" style={{ animationDelay: `${0.3 + i * 0.15}s` }}>
-              <span className="tw-stat-num">{s.num}</span>
-              <span className="tw-stat-unit">{s.unit}</span>
-            </div>
-          ))}
-        </div>
-
-        <button className="tw-primary-btn" onClick={onStart}>
-          Ja, loslegen!
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ─── QUESTION PAGE ───
-function QuestionPage({ question: q, input, setInput, onAnswer, progress, onBack, direction }) {
-  const animClass = direction === 'right' ? 'slide-in-right' : 'slide-in-left';
-
-  const renderContent = () => {
+  const renderQuestion = () => {
     switch (q.type) {
+      case 'welcome':
+        return <WelcomePage stats={WELCOME_STATS} onNext={() => goNext('yes')} />;
+      case 'choice':
+        return <ChoiceQuestion q={q} onSelect={(v) => goNext(v)} selected={getFieldValue(data, q.field)} />;
+      case 'yesno':
+        return <YesNoQuestion q={q} onSelect={(v) => goNext(v)} />;
       case 'text':
+      case 'date':
       case 'num':
       case 'plz':
-        return (
-          <div className="tw-q-input-area">
-            <input className="tw-q-input"
-              type="text"
-              inputMode={q.type === 'num' || q.type === 'plz' ? 'numeric' : 'text'}
-              placeholder={q.ph || ''}
-              value={input}
-              onChange={e => {
-                let val = e.target.value;
-                if (q.type === 'plz') {
-                  val = val.replace(/\D/g,'').slice(0,5);
-                  setInput(val);
-                  if (val.length === 5) setTimeout(() => onAnswer(val), 400);
-                  return;
-                }
-                setInput(val);
-              }}
-              onKeyDown={e => {
-                if (e.key === 'Enter' && input.trim()) {
-                  if (q.type === 'plz' && input.length !== 5) return;
-                  onAnswer(input.trim());
-                }
-              }}
-              autoFocus
-            />
-            <button className="tw-q-arrow" onClick={() => {
-              if (input.trim() && (q.type !== 'plz' || input.length === 5)) onAnswer(input.trim());
-            }} disabled={!input.trim()}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            </button>
-          </div>
-        );
-
-      case 'date':
-        return (
-          <div className="tw-q-input-area">
-            <input className="tw-q-input" type="date" value={input} onChange={e => setInput(e.target.value)} />
-            <button className="tw-q-arrow" onClick={() => input && onAnswer(input)} disabled={!input}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            </button>
-          </div>
-        );
-
-      case 'yesno':
-        return (
-          <div className="tw-q-yesno">
-            <button className="tw-q-yesno-btn tw-q-yes" onClick={() => onAnswer('yes')} autoFocus>
-              <span className="tw-check-icon">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#36893B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </span>
-              Ja
-            </button>
-            <button className="tw-q-yesno-btn tw-q-no" onClick={() => onAnswer('no')}>
-              <span className="tw-x-icon">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="#C0392B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </span>
-              Nein
-            </button>
-          </div>
-        );
-
-      case 'choice':
-        return (
-          <div className="tw-q-choice">
-            {q.opts.map(o => (
-              <button key={o.v} className="tw-q-choice-btn" onClick={() => onAnswer(o.v)}>
-                <span>{o.l}</span>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 12l4-4-4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </button>
-            ))}
-          </div>
-        );
-
+        return <InputQuestion q={q} value={input} onChange={setInput} onSubmit={goNext} inputRef={inputRef} />;
+      case 'facheck':
+        return <FACheckPage data={data} onNext={() => goNext('ok')} onBack={() => { setStep(step - 1); }} />;
+      case 'summary':
+        return <SummaryPage data={data} onNext={() => goNext('submit')} />;
       default:
         return null;
     }
   };
 
-  const progressPercent = progress.total > 0 ? Math.round((progress.pos / progress.total) * 100) : 0;
-
   return (
-    <div className="tw-question-page">
-      <div className="tw-q-header">
-        <button className="tw-back-btn dark" onClick={onBack}>
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M15 10H5M5 10l5-5M5 10l5 5" stroke="#0C0B0A" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-        </button>
-        <div className="tw-q-progress">
-          <div className="tw-q-progress-bar">
-            <div className="tw-q-progress-fill" style={{ width: `${progressPercent}%` }} />
-          </div>
-          <div className="tw-q-progress-label">{progress.pos} / {progress.total}</div>
+    <div className="tw-container">
+      {/* Progress Bar */}
+      <div className="tw-progress">
+        <div className="tw-progress-bar" style={{ width: `${progress}%` }} />
+        <div className="tw-progress-label">
+          {qIndex + 1} von {totalQuestions}
         </div>
       </div>
 
-      <div className={`tw-q-body ${animClass}`}>
-        {q.icon && <div className="tw-q-icon">{q.icon}</div>}
-        <p className="tw-q-text">{q.q}</p>
-        {q.type === 'num' && q.ph === '€' && <p className="tw-q-hint">Gib den Brutto-Jahresbetrag ein</p>}
-        {q.type === 'num' && q.ph === 'km' && <p className="tw-q-hint">Einfache Strecke pro Arbeitstag</p>}
-        {q.type === 'num' && q.ph === 'Tage' && <p className="tw-q-hint">Anzahl der Tage im Home-Office</p>}
-        {renderContent()}
+      {/* Question Content */}
+      <div className={`tw-content ${direction === 'right' ? 'slide-in-right' : 'slide-in-left'}`}>
+        <div className="tw-card">
+          {renderQuestion()}
+        </div>
+      </div>
+
+      {/* Back Button (only on non-welcome, non-summary, non-facheck pages) */}
+      {step > 0 && q.type !== 'welcome' && q.type !== 'facheck' && q.type !== 'summary' && (
+        <button className="tw-back-btn" onClick={goBack}>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M12 4l-6 6 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          Zurück
+        </button>
+      )}
+    </div>
+  );
+}
+
+function getFieldValue(data, field) {
+  if (!field) return '';
+  const [s, f] = field;
+  return data[s]?.[f] || '';
+}
+
+// ─── WELCOME ───
+function WelcomePage({ stats, onNext }) {
+  return (
+    <div className="tw-question-page">
+      <div className="tw-q-body" style={{ textAlign: 'center', paddingTop: '1rem' }}>
+        <div className="tw-welcome-icon">
+          <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+            <rect width="64" height="64" rx="16" fill="#ADEE68"/>
+            <path d="M20 44L32 20L44 44" stroke="#0C0B0A" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M26 36H38" stroke="#0C0B0A" strokeWidth="4" strokeLinecap="round"/>
+          </svg>
+        </div>
+        <h2 className="tw-q-title">Deine Steuererklärung 2025</h2>
+        <p className="tw-q-desc">
+          Beantworte ein paar einfache Fragen. Wir berechnen deine Erstattung
+          und zeigen dir, welche Unterlagen du brauchst.
+        </p>
+
+        <div className="tw-welcome-stats">
+          {stats.map((s, i) => (
+            <div key={i} className="tw-welcome-stat">
+              <span className="tw-welcome-stat-num">{s.num}</span>
+              <span className="tw-welcome-stat-label">{s.label}</span>
+            </div>
+          ))}
+        </div>
+
+        <button className="tw-primary-btn" onClick={onNext}>
+          Los geht's
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{ marginLeft: '6px' }}>
+            <path d="M8 4l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
       </div>
     </div>
   );
 }
 
-// ─── FINANZAMT CHECK ───
-function FaCheckPage({ data, onNext }) {
+// ─── YES/NO ───
+function YesNoQuestion({ q, onSelect }) {
+  return (
+    <div className="tw-question-page">
+      <div className="tw-q-body">
+        <div className="tw-q-icon">{q.icon}</div>
+        <h2 className="tw-q-title">{q.q}</h2>
+        <div className="tw-q-choices">
+          <button className="tw-choice-btn tw-choice-yes" onClick={() => onSelect('yes')}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+              <path d="M8 12l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Ja
+          </button>
+          <button className="tw-choice-btn tw-choice-no" onClick={() => onSelect('no')}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+              <path d="M15 9l-6 6M9 9l6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+            Nein
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── CHOICE ───
+function ChoiceQuestion({ q, onSelect, selected }) {
+  return (
+    <div className="tw-question-page">
+      <div className="tw-q-body">
+        <div className="tw-q-icon">{q.icon}</div>
+        <h2 className="tw-q-title">{q.q}</h2>
+        <div className="tw-q-choices">
+          {q.opts.map((opt) => (
+            <button
+              key={opt.v}
+              className={`tw-choice-btn ${selected === opt.v ? 'tw-choice-selected' : ''}`}
+              onClick={() => onSelect(opt.v)}
+            >
+              {opt.l}
+              {selected === opt.v && (
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{ marginLeft: 'auto' }}>
+                  <circle cx="10" cy="10" r="7" fill="#ADEE68"/>
+                  <path d="M7 10l2 2 4-4" stroke="#0C0B0A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── INPUT ───
+function InputQuestion({ q, value, onChange, onSubmit, inputRef }) {
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (value.trim()) onSubmit(value.trim());
+  };
+
+  return (
+    <div className="tw-question-page">
+      <div className="tw-q-body">
+        <div className="tw-q-icon">{q.icon}</div>
+        <h2 className="tw-q-title">{q.q}</h2>
+        <form onSubmit={handleSubmit} className="tw-input-form">
+          <input
+            ref={inputRef}
+            type={q.type === 'num' || q.type === 'plz' ? 'text' : q.type}
+            inputMode={q.type === 'num' ? 'numeric' : q.type === 'plz' ? 'numeric' : 'text'}
+            className="tw-text-input"
+            placeholder={q.ph}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            autoFocus
+            required
+          />
+          <button type="submit" className="tw-primary-btn" disabled={!value.trim()}>
+            Weiter
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{ marginLeft: '6px' }}>
+              <path d="M8 4l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ─── FA CHECK ───
+function FACheckPage({ data, onNext, onBack }) {
   const fa = data.address.finanzamt;
   return (
     <div className="tw-question-page">
-      <div className="tw-q-header">
-        <button className="tw-back-btn dark" onClick={onNext}>
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M15 10H5M5 10l5-5M5 10l5 5" stroke="#0C0B0A" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-        </button>
-      </div>
-      <div className="tw-q-body" style={{textAlign:'center', paddingTop:'2rem'}}>
-        <div className="tw-q-icon" style={{fontSize:'3rem', marginBottom:'1rem'}}>🏛️</div>
-        <h2 style={{fontSize:'1.25rem',fontWeight:700,marginBottom:'0.5rem'}}>Dein Finanzamt</h2>
-        <p style={{color:'var(--color-text-secondary)',marginBottom:'0.25rem'}}>{fa?.name}</p>
-        <p style={{color:'var(--color-text-secondary)',marginBottom:'1rem'}}>FA-Nr. {fa?.nummer}</p>
-        <p style={{color:'var(--color-text-secondary)',fontSize:'0.85rem',marginBottom:'1.5rem'}}>{fa?.adresse}</p>
-        <button className="tw-primary-btn" onClick={onNext}>Weiter</button>
-        <p style={{fontSize:'0.75rem',color:'var(--color-text-muted)',marginTop:'1rem'}}>
-          Deine Daten werden an dieses Finanzamt übermittelt
-        </p>
+      <div className="tw-q-body" style={{ paddingTop: '1.5rem' }}>
+        <div className="tw-facheck-card">
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🏛️</div>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem' }}>Dein Finanzamt</h2>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+            Anhand deiner PLZ haben wir dein zuständiges Finanzamt ermittelt:
+          </p>
+          {fa ? (
+            <div className="tw-fa-detail">
+              <div className="tw-fa-name">{fa.name}</div>
+              <div className="tw-fa-addr">{fa.adresse}</div>
+              <div className="tw-fa-tel">{fa.telefon}</div>
+              <div className="tw-fa-nr">FA-Nr: {fa.nummer}</div>
+            </div>
+          ) : (
+            <div className="tw-fa-detail">
+              <p>Kein Finanzamt gefunden. Bitte prüfe deine PLZ.</p>
+            </div>
+          )}
+        </div>
+        <div style={{ marginTop: '1.5rem' }}>
+          <button className="tw-primary-btn" onClick={onNext}>Weiter</button>
+          <button className="tw-login-link" onClick={onBack} style={{ display: 'block', margin: '1rem auto 0' }}>
+            ← PLZ korrigieren
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -343,10 +370,10 @@ function SummaryPage({ data, onNext }) {
 
   return (
     <div className="tw-question-page">
-      <div className="tw-q-body" style={{paddingTop:'1.5rem'}}>
-        <div style={{fontSize:'3rem',textAlign:'center',marginBottom:'0.5rem'}}>📋</div>
-        <h2 style={{fontSize:'1.25rem',fontWeight:700,textAlign:'center',marginBottom:'0.25rem'}}>Zusammenfassung</h2>
-        <p style={{fontSize:'0.85rem',color:'var(--color-text-secondary)',textAlign:'center',marginBottom:'1.5rem'}}>
+      <div className="tw-q-body" style={{ paddingTop: '1.5rem' }}>
+        <div style={{ fontSize: '3rem', textAlign: 'center', marginBottom: '0.5rem' }}>📋</div>
+        <h2 style={{ fontSize: '1.25rem', fontWeight: 700, textAlign: 'center', marginBottom: '0.25rem' }}>Zusammenfassung</h2>
+        <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', textAlign: 'center', marginBottom: '1.5rem' }}>
           Bitte überprüfe deine Angaben
         </p>
 
@@ -402,29 +429,29 @@ function ResultView({ data, onBack }) {
 
   return (
     <div className="tw-question-page">
-      <div className="tw-q-body" style={{textAlign:'center',paddingTop:'2rem'}}>
-        <div className="tw-success-animation" style={{fontSize:'3.5rem',marginBottom:'1rem', animation: 'scaleIn 0.5s ease'}}>🎉</div>
-        <h2 style={{fontSize:'1.25rem',fontWeight:700,marginBottom:'0.5rem'}}>Steuererklärung fertig!</h2>
-        <p style={{color:'var(--color-text-secondary)',fontSize:'0.9rem',marginBottom:'1.5rem'}}>
+      <div className="tw-q-body" style={{ textAlign: 'center', paddingTop: '2rem' }}>
+        <div style={{ fontSize: '3.5rem', marginBottom: '1rem', animation: 'scaleIn 0.5s ease' }}>🎉</div>
+        <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem' }}>Steuererklärung fertig!</h2>
+        <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
           Deine Daten wurden gespeichert.
         </p>
-        <div className="tw-refund-box" style={{margin:'1.5rem 0', animation: 'fadeInUp 0.6s ease 0.2s both'}}>
+        <div className="tw-refund-box" style={{ margin: '1.5rem 0', animation: 'fadeInUp 0.6s ease 0.2s both' }}>
           <span className="tw-refund-label">Voraussichtliche Erstattung</span>
           <span className="tw-refund-amount">{refund.toLocaleString('de-DE')} €</span>
         </div>
         {fa && (
-          <p style={{color:'var(--color-text-secondary)',fontSize:'0.85rem',marginBottom:'1.5rem'}}>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
             {fa.name} (FA-Nr. {fa.nummer})
           </p>
         )}
-        <button className="tw-primary-btn" onClick={exportXML} style={{animation: 'fadeInUp 0.6s ease 0.4s both'}}>
+        <button className="tw-primary-btn" onClick={exportXML} style={{ animation: 'fadeInUp 0.6s ease 0.4s both' }}>
           📥 ELSTER-XML exportieren
         </button>
-        <p style={{fontSize:'0.75rem',color:'var(--color-text-muted)',marginTop:'1rem', animation: 'fadeInUp 0.6s ease 0.6s both'}}>
+        <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '1rem', animation: 'fadeInUp 0.6s ease 0.6s both' }}>
           Importiere die XML-Datei in dein ELSTER-Portal,<br />
           um sie offiziell beim Finanzamt einzureichen.
         </p>
-        <button className="tw-login-link" onClick={onBack} style={{marginTop:'1.5rem'}}>
+        <button className="tw-login-link" onClick={onBack} style={{ marginTop: '1.5rem' }}>
           ← Zurück zum Dashboard
         </button>
       </div>

@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Auth({ isOpen, onClose, onLoginSuccess }) {
-  const { loginWithEmail, registerWithEmail, loginWithGoogle, loginWithApple, resetPassword } = useAuth();
+  const { loginWithEmail, registerWithEmail, loginWithGoogle, loginWithApple, resetPassword, authError, clearAuthError } = useAuth();
   const [mode, setMode] = useState('select');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [localError, setLocalError] = useState('');
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [redirectMsg, setRedirectMsg] = useState('');
@@ -17,11 +17,12 @@ export default function Auth({ isOpen, onClose, onLoginSuccess }) {
       setMode('select');
       setEmail('');
       setPassword('');
-      setError('');
+      setLocalError('');
       setSuccessMsg('');
       setRedirectMsg('');
+      clearAuthError();
     }
-  }, [isOpen]);
+  }, [isOpen, clearAuthError]);
 
   if (!isOpen) return null;
 
@@ -35,7 +36,7 @@ export default function Auth({ isOpen, onClose, onLoginSuccess }) {
 
   const handleEmailAuth = async (e) => {
     e.preventDefault();
-    setError('');
+    setLocalError('');
     setRedirectMsg('');
     setLoading(true);
     try {
@@ -47,14 +48,14 @@ export default function Auth({ isOpen, onClose, onLoginSuccess }) {
       onLoginSuccess?.();
       handleClose();
     } catch (err) {
-      setError(getErrorMessage(err.code));
+      setLocalError(getErrorMessage(err.code));
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleAuth = async () => {
-    setError('');
+    setLocalError('');
     setRedirectMsg('');
     setLoading(true);
     try {
@@ -63,19 +64,26 @@ export default function Auth({ isOpen, onClose, onLoginSuccess }) {
         onLoginSuccess?.();
         handleClose();
       } else {
-        // Redirect-based – show message
         setRedirectMsg('Weiterleitung zu Google… Bitte warten.');
-        setTimeout(() => onClose(), 500);
+        setTimeout(() => {
+          onClose();
+        }, 1000);
       }
     } catch (err) {
-      setError(getErrorMessage(err.code));
+      if (err.code === 'auth/popup-closed-by-user') {
+        // User cancelled, do nothing
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setLocalError('Diese Domain ist nicht autorisiert. Bitte Admin kontaktieren.');
+      } else {
+        setLocalError(getErrorMessage(err.code));
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const handleAppleAuth = async () => {
-    setError('');
+    setLocalError('');
     setRedirectMsg('');
     setLoading(true);
     try {
@@ -84,12 +92,21 @@ export default function Auth({ isOpen, onClose, onLoginSuccess }) {
         onLoginSuccess?.();
         handleClose();
       } else {
-        // Redirect-based – show message
         setRedirectMsg('Weiterleitung zu Apple… Bitte warten.');
-        setTimeout(() => onClose(), 500);
+        setTimeout(() => {
+          onClose();
+        }, 1000);
       }
     } catch (err) {
-      setError(getErrorMessage(err.code));
+      if (err.code === 'auth/popup-closed-by-user') {
+        // User cancelled, do nothing
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setLocalError('Diese Domain ist nicht autorisiert. Bitte Admin kontaktieren.');
+      } else if (err.code === 'auth/operation-not-allowed' || err.code === 'auth/admin-restricted-operation') {
+        setLocalError('Apple Anmeldung ist in der Firebase-Konsole noch nicht aktiviert. Bitte verwende E-Mail oder Google.');
+      } else {
+        setLocalError(getErrorMessage(err.code));
+      }
     } finally {
       setLoading(false);
     }
@@ -97,14 +114,14 @@ export default function Auth({ isOpen, onClose, onLoginSuccess }) {
 
   const handleForgotPassword = async (e) => {
     e.preventDefault();
-    setError('');
+    setLocalError('');
     setRedirectMsg('');
     setLoading(true);
     try {
       await resetPassword(email);
       setSuccessMsg('E-Mail zum Zurücksetzen wurde gesendet. Bitte prüfe dein Postfach.');
     } catch (err) {
-      setError(getErrorMessage(err.code));
+      setLocalError(getErrorMessage(err.code));
     } finally {
       setLoading(false);
     }
@@ -139,41 +156,65 @@ export default function Auth({ isOpen, onClose, onLoginSuccess }) {
           </p>
         </div>
 
-        {error && <div className="auth-error">{error}</div>}
+        {localError && <div className="auth-error">{localError}</div>}
+        {authError && <div className="auth-error">{authError.message}</div>}
         {successMsg && <div className="auth-success">{successMsg}</div>}
-        {redirectMsg && <div className="auth-success">{redirectMsg}</div>}
+        {redirectMsg && <div className="auth-redirect">{redirectMsg}</div>}
 
-        {mode === 'select' && (
+        {redirectMsg && (
+          <div style={{ textAlign: 'center', padding: '2rem 0' }}>
+            <div className="app-loading-spinner" style={{ width: 32, height: 32, margin: '0 auto 1rem' }} />
+            <p style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>
+              {redirectMsg.includes('Apple') ? 'Apple' : 'Google'}-Anmeldung wird gestartet…
+            </p>
+            <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '0.5rem' }}>
+              Nach der Weiterleitung wirst du automatisch zurückgeleitet.
+            </p>
+          </div>
+        )}
+
+        {!redirectMsg && mode === 'select' && (
           <div className="auth-options">
-            <button className="auth-btn auth-btn--email" onClick={() => { setError(''); setMode('email'); }}>
+            <button className="auth-btn auth-btn--email" onClick={() => { setLocalError(''); setMode('email'); }}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                 <rect x="1" y="3" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-                <path d="M1 5L10 11L19 5" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+                <path d="M2 4l8 6 8-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              Mit E-Mail-Adresse fortfahren
+              <span>Mit E-Mail fortfahren</span>
             </button>
 
             <button className="auth-btn auth-btn--google" onClick={handleGoogleAuth} disabled={loading}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M18.4 10.23c0-.68-.06-1.34-.17-1.97H10v3.73h4.71a4.43 4.43 0 0 1-1.92 2.91v2.42h3.11c1.82-1.68 2.87-4.15 2.87-7.09z" fill="#4285F4"/>
-                <path d="M10 19c2.6 0 4.78-.86 6.37-2.33l-3.11-2.42c-.86.58-1.96.92-3.26.92-2.5 0-4.63-1.69-5.39-3.97H1.38v2.5C3.01 16.92 6.3 19 10 19z" fill="#34A853"/>
-                <path d="M4.61 13.2a5.86 5.86 0 0 1 0-3.74v-2.5H1.38a9.96 9.96 0 0 0 0 8.74l3.23-2.5z" fill="#FBBC05"/>
-                <path d="M10 4.09c1.32 0 2.5.45 3.44 1.35l2.58-2.59C14.66 1.2 12.46.2 10 .2 6.3.2 3.01 2.28 1.38 5.2l3.23 2.5C5.37 5.78 7.5 4.09 10 4.09z" fill="#EA4335"/>
+                <path d="M18.17 10.19c0-.63-.06-1.24-.17-1.83H10v3.46h4.59a4.12 4.12 0 01-1.79 2.7v2.25h2.9c1.7-1.56 2.68-3.86 2.68-6.58z" fill="#4285F4"/>
+                <path d="M10 18.5c2.43 0 4.47-.8 5.96-2.18l-2.9-2.25c-.8.54-1.83.86-3.06.86-2.35 0-4.34-1.59-5.05-3.73H1.97v2.32A9 9 0 0010 18.5z" fill="#34A853"/>
+                <path d="M4.95 11.45a5.43 5.43 0 010-3.46V5.67H1.97a9 9 0 000 8.1l2.98-2.32z" fill="#FBBC05"/>
+                <path d="M10 4.07c1.32 0 2.5.45 3.43 1.35l2.57-2.57C14.46 1.7 12.43.83 10 .83a9 9 0 00-8.03 4.84l2.98 2.32C5.66 5.66 7.65 4.07 10 4.07z" fill="#EA4335"/>
               </svg>
-              Mit Google fortfahren
+              <span>Mit Google fortfahren</span>
             </button>
 
             <button className="auth-btn auth-btn--apple" onClick={handleAppleAuth} disabled={loading}>
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M14.94 10.63c-.02-1.4.62-2.45 1.85-3.2-.7-1.02-1.76-1.6-3.18-1.74-1.35-.13-2.84.8-3.54.8-.72 0-1.88-.76-3.16-.74-1.63.02-3.13.96-3.97 2.44-1.7 2.98-.44 7.4 1.22 9.82.8 1.18 1.75 2.5 3 2.44 1.2-.06 1.67-.8 3.13-.8 1.44 0 1.86.8 3.14.77 1.3-.02 2.13-1.2 2.91-2.38.92-1.36 1.3-2.7 1.32-2.77-.02-.02-2.54-1-2.52-3.64z" fill="white"/>
-                <path d="M12.12 3.2C12.72 2.37 13.1 1.34 13.02.2c-.95.06-2.08.52-2.72 1.22-.56.6-1.05 1.58-.96 2.5 1.02.08 1.97-.38 2.78-1.72z" fill="white"/>
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M14.94 10.64c-.01-1.58.72-2.78 2.1-3.64-.79-1.14-1.98-1.77-3.57-1.9-1.52-.13-3.17.89-3.78.89-.63 0-2.01-.86-3.31-.86C4.47 5.2 2.7 6.7 2.7 9.73c0 1.14.2 2.32.61 3.54.54 1.58 2.49 5.46 4.52 5.4 1.07-.03 1.8-.77 3.16-.77 1.33 0 2.14.77 3.23.77 2.05-.03 3.8-3.55 4.3-5.14-2.73-1.3-2.58-3.75-2.58-3.89zM12.44 4.25c.84-1.01.76-1.93.72-2.25-.82.04-1.78.46-2.34 1.06-.63.66-.98 1.47-.9 2.34.84.06 1.66-.4 2.52-1.15z"/>
               </svg>
-              Mit Apple fortfahren
+              <span>Mit Apple fortfahren</span>
+            </button>
+
+            <div className="auth-divider">
+              <span>oder</span>
+            </div>
+
+            <button className="auth-btn auth-btn--register" onClick={() => { setLocalError(''); setMode('register'); }}>
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <circle cx="10" cy="7" r="3" stroke="currentColor" strokeWidth="1.5"/>
+                <path d="M3 18c0-3.31 3.13-6 7-6s7 2.69 7 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+              <span>Konto erstellen</span>
             </button>
           </div>
         )}
 
-        {(mode === 'email' || mode === 'register') && (
+        {!redirectMsg && (mode === 'email' || mode === 'register') && (
           <form className="auth-form" onSubmit={handleEmailAuth}>
             <div className="auth-field">
               <label htmlFor="auth-email" className="auth-label">E-Mail-Adresse</label>
@@ -212,7 +253,7 @@ export default function Auth({ isOpen, onClose, onLoginSuccess }) {
           </form>
         )}
 
-        {mode === 'forgot' && (
+        {!redirectMsg && mode === 'forgot' && (
           <form className="auth-form" onSubmit={handleForgotPassword}>
             <div className="auth-field">
               <label htmlFor="forgot-email" className="auth-label">E-Mail-Adresse</label>
@@ -237,7 +278,7 @@ export default function Auth({ isOpen, onClose, onLoginSuccess }) {
           {mode === 'email' && (
             <p className="auth-switch">
               Noch kein Konto?{' '}
-              <button className="auth-link" onClick={() => { setError(''); setMode('register'); }}>
+              <button className="auth-link" onClick={() => { setLocalError(''); setMode('register'); }}>
                 Jetzt registrieren
               </button>
             </p>
@@ -245,18 +286,18 @@ export default function Auth({ isOpen, onClose, onLoginSuccess }) {
           {mode === 'register' && (
             <p className="auth-switch">
               Bereits registriert?{' '}
-              <button className="auth-link" onClick={() => { setError(''); setMode('email'); }}>
+              <button className="auth-link" onClick={() => { setLocalError(''); setMode('email'); }}>
                 Jetzt anmelden
               </button>
             </p>
           )}
           {mode === 'forgot' && (
-            <button className="auth-back" onClick={() => { setError(''); setMode('email'); }}>
+            <button className="auth-back" onClick={() => { setLocalError(''); setMode('email'); }}>
               ← Zurück zur Anmeldung
             </button>
           )}
           {(mode === 'email' || mode === 'register') && (
-            <button className="auth-back" onClick={() => { setError(''); setMode('select'); }}>
+            <button className="auth-back" onClick={() => { setLocalError(''); setMode('select'); }}>
               ← Andere Anmeldeoptionen
             </button>
           )}
@@ -281,11 +322,11 @@ function getErrorMessage(code) {
     'auth/too-many-requests': 'Zu viele Versuche. Bitte warte kurz.',
     'auth/popup-closed-by-user': 'Der Login wurde abgebrochen.',
     'auth/account-exists-with-different-credential': 'Ein Konto mit dieser E-Mail existiert bereits mit einer anderen Anmeldeart.',
-    'auth/operation-not-supported-in-this-environment': 'Diese Anmeldemethode wird auf diesem Gerät nicht unterstützt. Bitte verwende E-Mail oder Google.',
+    'auth/operation-not-supported-in-this-environment': 'Diese Anmeldemethode wird auf diesem Gerät nicht unterstützt. Bitte verwende E-Mail.',
     'auth/web-context-unsupported': 'Diese Anmeldemethode wird in diesem Browser nicht unterstützt.',
     'auth/popup-blocked': 'Popup wurde blockiert. Bitte erlaube Popups in den Browser-Einstellungen.',
     'auth/unauthorized-domain': 'Diese Domain ist für die Anmeldung nicht freigeschaltet. Bitte den Admin kontaktieren.',
-    'auth/operation-not-allowed': 'Apple Anmeldung ist noch nicht eingerichtet. Der Admin muss Apple in der Firebase-Konsole aktivieren. Bitte verwende vorerst E-Mail oder Google.',
+    'auth/operation-not-allowed': 'Apple Anmeldung ist noch nicht eingerichtet. Bitte verwende E-Mail oder Google.',
     'auth/admin-restricted-operation': 'Apple Anmeldung ist noch nicht konfiguriert. Bitte verwende E-Mail oder Google.',
     'auth/redirect-cancelled-by-user': 'Die Anmeldung wurde abgebrochen.',
     'auth/redirect-operation-pending': 'Eine Anmeldung ist bereits in Bearbeitung. Bitte warte einen Moment.',
